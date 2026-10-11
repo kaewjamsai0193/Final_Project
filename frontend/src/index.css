@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+
+@theme {
+  --font-sans: "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #111827;
+  --color-muted: #6b7280;
+  --color-line: #e5e7eb;
+  --color-surface: #f9fafb;
+  --color-accent: #2563eb;
+  --color-accent-soft: #eff6ff;
+  --color-accent-ink: #1d4ed8;
+  --color-warn-soft: #fffbeb;
+  --color-warn-ink: #b45309;
+  --color-ok-soft: #f0fdf4;
+  --color-ok-ink: #15803d;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fef2f2;
+  --color-neutral-soft: #f3f4f6;
+}
+
+/* หน้าพิมพ์ A4 ถ้าแก้ margin ต้องแก้ print:min-h ใน PurchaseOrderPrintPage ด้วย (297 - 2×margin) */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-ink antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+  .lucide {
+    @apply shrink-0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+@layer components {
+  .page-title {
+    @apply text-xl font-semibold lg:text-2xl;
+  }
+  .card {
+    @apply rounded-xl border border-line bg-white p-4;
+  }
+  .label {
+    @apply mb-1 block text-sm text-muted;
+  }
+  .field-hint {
+    @apply mt-1 block text-sm text-muted;
+  }
+  .field-error {
+    @apply text-sm font-medium text-danger;
+  }
+  .input {
+    @apply min-h-11 w-full rounded-lg border border-line bg-white px-3 py-2 text-base transition-colors duration-150 focus:border-accent focus:ring-3 focus:ring-accent-soft focus:outline-none disabled:bg-surface disabled:text-muted;
+  }
+
+  .btn {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 font-semibold whitespace-nowrap transition duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-accent text-white hover:bg-accent-ink;
+  }
+  .btn-secondary {
+    @apply border border-line bg-white text-ink hover:bg-surface;
+  }
+  .btn-ghost {
+    @apply text-ink hover:bg-surface;
+  }
+  .btn-danger {
+    @apply bg-danger text-white hover:brightness-110;
+  }
+  .btn-icon {
+    @apply min-w-11 px-0;
+  }
+
+  /* ช่องติ๊ก role="switch" ที่หน้าตาเป็นสวิตช์ เลื่อนซ้ายคือปิด เลื่อนขวาคือเปิด */
+  .switch {
+    @apply relative h-7 w-12 shrink-0 cursor-pointer appearance-none rounded-full bg-gray-300 transition-colors duration-150 checked:bg-ok-ink;
+  }
+  .switch::before {
+    content: "";
+    @apply absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform duration-150;
+  }
+  .switch:checked::before {
+    @apply translate-x-5;
+  }
+  .tabs {
+    @apply flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line;
+  }
+  .tab {
+    @apply -mb-px inline-flex min-h-11 cursor-pointer items-center border-b-2 border-transparent px-3 text-sm font-medium whitespace-nowrap text-muted transition-colors duration-150 hover:text-ink aria-selected:border-accent aria-selected:text-ink aria-[current=page]:border-accent aria-[current=page]:text-ink;
+  }
+
+  .modal {
+    @apply mx-0 mt-auto mb-0 max-h-[92dvh] w-full max-w-none rounded-t-2xl bg-white p-0 text-ink backdrop:bg-ink/40 md:m-auto md:max-h-[90dvh] md:w-[calc(100%-2rem)] md:max-w-[560px] md:rounded-xl;
+  }
+  .modal[open] {
+    @apply flex flex-col;
+  }
+
+  .table {
+    @apply w-full text-sm;
+  }
+  .table th {
+    @apply border-b border-line bg-surface px-3 py-2.5 text-left font-medium whitespace-nowrap text-muted;
+  }
+  .table td {
+    @apply border-b border-line px-3 py-3 align-middle;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap;
+  }
+  .badge-neutral {
+    @apply bg-neutral-soft text-ink;
+  }
+  .badge-info {
+    @apply bg-accent-soft text-accent-ink;
+  }
+  .badge-warn {
+    @apply bg-warn-soft text-warn-ink;
+  }
+  .badge-ok {
+    @apply bg-ok-soft text-ok-ink;
+  }
+  .badge-danger {
+    @apply bg-danger-soft text-danger;
+  }
+
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}

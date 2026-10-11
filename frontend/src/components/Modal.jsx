@@ -1,0 +1,45 @@
+import { X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+
+
+// หน้าต่างป๊อปอัพ เปิดทันทีที่วาด อยากปิดก็เลิกวาด กด Esc หรือคลิกข้างนอกจะเรียก onClose
+// ถ้าส่ง onSubmit มาจะเป็นฟอร์ม วาดไว้ท้าย <body> กันสไตล์ของกล่องแม่มาทับ
+export default function Modal({ title, onClose, onSubmit, footer, children }) {
+  const ref = useRef(null);
+
+  useEffect(() => ref.current.showModal(), []);
+
+  const Body = onSubmit ? "form" : "div";
+  return createPortal(
+    <dialog
+      ref={ref}
+      className="modal"
+      aria-label={title}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      onClick={(e) => {
+        // คลิกโดนพื้นหลังนอกกล่องให้ปิด
+        if (e.target === ref.current) onClose();
+      }}
+    >
+      <Body onSubmit={onSubmit} className="flex min-h-0 flex-auto flex-col">
+        <header className="flex items-center gap-2 border-b border-line py-2 pr-2 pl-4">
+          <h2 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h2>
+          <button type="button" aria-label="ปิด" className="btn btn-ghost btn-icon" onClick={onClose}>
+            <X />
+          </button>
+        </header>
+        <div className="min-h-0 flex-auto space-y-4 overflow-y-auto p-4">{children}</div>
+        {footer && (
+          <footer className="border-t border-line px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {footer}
+          </footer>
+        )}
+      </Body>
+    </dialog>,
+    document.body,
+  );
+}
