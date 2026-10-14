@@ -27,6 +27,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True)
     password_hash: Mapped[str] = mapped_column(String(200))
     full_name: Mapped[str] = mapped_column(String(100))
+    email: Mapped[str | None] = mapped_column(String(200))  # ว่างได้ คนไม่มีอีเมลให้เจ้าของอู่รีเซ็ตรหัสให้
     role: Mapped[str] = mapped_column(String(10))
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
     __table_args__ = (CheckConstraint("role in ('admin','employee','mechanic')", name="role"),)

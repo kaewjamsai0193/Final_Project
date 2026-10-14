@@ -5,6 +5,7 @@ import "./index.css";
 import { queryClient } from "./api";
 import { AuthProvider, useAuth } from "./auth";
 import LoginPage from "./pages/LoginPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AppLayout from "./components/AppLayout";
 import SettingsPage from "./pages/settings/SettingsPage";
 import UserFormPage from "./pages/users/UserFormPage";
@@ -19,7 +20,6 @@ import PurchaseOrderDetailPage from "./pages/purchase-orders/PurchaseOrderDetail
 import PurchaseOrderFormPage from "./pages/purchase-orders/PurchaseOrderFormPage";
 import PurchaseOrderListPage from "./pages/purchase-orders/PurchaseOrderListPage";
 import PurchaseOrderPrintPage from "./pages/purchase-orders/PurchaseOrderPrintPage";
-
 
 const ADMIN = ["admin"];
 const STAFF = ["admin", "employee"];
@@ -39,6 +39,7 @@ createRoot(document.getElementById("root")).render(
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/print/po/:id"
             element={
@@ -79,7 +80,7 @@ createRoot(document.getElementById("root")).render(
                 <Route path=":id" element={<UserFormPage />} />
               </Route>
             </Route>
-              <Route
+            <Route
               element={
                 <Guard roles={STAFF}>
                   <Outlet />

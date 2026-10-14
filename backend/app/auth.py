@@ -1,3 +1,4 @@
+import hashlib
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -22,6 +23,33 @@ def create_token(user_id: int) -> str:
     """สร้าง token ของผู้ใช้คนนี้ หมดอายุตามเวลาที่ตั้งใน .env"""
     expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
     return jwt.encode({"user_id": user_id, "exp": expire}, JWT_SECRET, algorithm="HS256")
+
+
+RESET_MINUTES = 30
+
+
+def _password_fingerprint(user: User) -> str:
+    """ลายนิ้วมือของรหัสปัจจุบัน เปลี่ยนรหัสแล้วค่านี้เปลี่ยน ลิงก์รีเซ็ตเก่าจึงใช้ซ้ำไม่ได้"""
+    return hashlib.sha256(user.password_hash.encode()).hexdigest()[:16]
+
+
+def create_reset_token(user: User) -> str:
+    """token ในลิงก์ตั้งรหัสใหม่ ใช้ได้ครั้งเดียวภายใน 30 นาที ใช้แทน token ล็อกอินไม่ได้ (ไม่มี user_id)"""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=RESET_MINUTES)
+    payload = {"reset": user.id, "pw": _password_fingerprint(user), "exp": expire}
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+
+def reset_token_user(db, token: str) -> User | None:
+    """หาเจ้าของลิงก์รีเซ็ต token เสีย หมดอายุ ใช้ไปแล้ว หรือบัญชีถูกปิด ได้ None"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user = db.get(User, payload["reset"])
+    except (jwt.PyJWTError, KeyError):
+        return None
+    if user is None or not user.is_active or payload.get("pw") != _password_fingerprint(user):
+        return None
+    return user
 
 
 def current_user(token=Depends(bearer), db=Depends(get_db)) -> User:

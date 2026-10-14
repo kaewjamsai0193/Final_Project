@@ -7,7 +7,7 @@ import { ROLE_NAME, useAuth } from "../../auth";
 import Field from "../../components/Field";
 import Modal from "../../components/Modal";
 
-const EMPTY = { username: "", full_name: "", role: "employee", password: "" };
+const EMPTY = { username: "", full_name: "", email: "", role: "employee", password: "" };
 
 // ป๊อปอัพเพิ่มหรือแก้ผู้ใช้ มี id ใน URL คือแก้
 export default function UserFormPage() {
@@ -16,7 +16,13 @@ export default function UserFormPage() {
   const { data: users } = useQuery({ queryKey: ["users"] });
   const current = id && users?.find((u) => String(u.id) === id);
   if (id && !current) return <Modal title={users ? "ไม่พบผู้ใช้" : "กำลังโหลด…"} onClose={close} />;
-  return <UserForm key={id ?? "new"} initial={current ? { ...current, password: "" } : EMPTY} close={close} />;
+  return (
+    <UserForm
+      key={id ?? "new"}
+      initial={current ? { ...current, email: current.email ?? "", password: "" } : EMPTY}
+      close={close}
+    />
+  );
 }
 
 // ฟอร์มผู้ใช้ ตอนแก้ช่องรหัสผ่านซ่อนไว้จนกดเปลี่ยน
@@ -26,7 +32,8 @@ function UserForm({ initial, close }) {
   const { user: me, setUser } = useAuth();
   const queryClient = useQueryClient();
   const refreshUsers = () => queryClient.invalidateQueries({ queryKey: ["users"] });
-  const { register, handleSubmit } = useForm({ defaultValues: initial });
+  const { register, handleSubmit, watch } = useForm({ defaultValues: initial });
+  const isAdmin = watch("role") === "admin";
 
   const save = useMutation({
     mutationFn: (form) =>
@@ -35,12 +42,13 @@ function UserForm({ initial, close }) {
             method: "PATCH",
             body: {
               full_name: form.full_name,
+              email: form.email || null,
               role: form.role,
               is_active: form.is_active,
               password: form.password || null,
             },
           })
-        : api("/users", { method: "POST", body: form }),
+        : api("/users", { method: "POST", body: { ...form, email: form.email || null } }),
     onSuccess: (saved) => {
       if (saved.id === me.id) setUser(saved); // แก้บัญชีตัวเอง ชื่อในแถบข้างจะเปลี่ยนตาม
       refreshUsers();
@@ -85,6 +93,19 @@ function UserForm({ initial, close }) {
           ))}
         </select>
       </label>
+      <Field
+        label="อีเมล"
+        hint={
+          isAdmin
+            ? "เจ้าของอู่ต้องมี ไว้รีเซ็ตรหัสผ่านตอนลืม"
+            : "ไว้รีเซ็ตรหัสผ่านเองตอนลืม ไม่มีเว้นว่างได้ เจ้าของอู่รีเซ็ตให้แทน"
+        }
+        type="email"
+        required={isAdmin}
+        autoCapitalize="none"
+        autoComplete="off"
+        {...register("email")}
+      />
       {isEdit && !changingPassword && (
         <button type="button" className="btn btn-secondary" onClick={() => setChangingPassword(true)}>
           เปลี่ยนรหัสผ่าน
