@@ -3,7 +3,7 @@ import { Minus, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
-import { api, docNo, formatDate, formatMoney, formatQty } from "../../api";
+import { api, docNo, formatDate, formatMoney, formatQty, vatOf } from "../../api";
 import { useAuth } from "../../auth";
 import DetailLayout from "../../components/DetailLayout";
 import Field from "../../components/Field";
@@ -21,6 +21,8 @@ export default function ProductDetailPage() {
   const isStaff = user.role !== "mechanic";
   const product = useQuery({ queryKey: ["products", id] });
   const moves = useQuery({ queryKey: ["products", id, "movements"] });
+  const lots = useQuery({ queryKey: ["products", id, "lots"], enabled: isAdmin });
+  const { data: shop } = useQuery({ queryKey: ["settings"] });
   const [dialog, setDialog] = useState(null); // ป๊อปอัพที่เปิดอยู่ null, "edit", "opening" หรือ "waste"
   const closeDialog = () => setDialog(null);
 
@@ -69,10 +71,22 @@ export default function ProductDetailPage() {
         </div>
       </div>
       <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-        <Fact label="ราคาขาย" value={formatMoney(p.sale_price)} />
+        <Fact label="ราคาขาย (ก่อน VAT)" value={formatMoney(p.sale_price)} />
+        {shop && (
+          <Fact
+            label={`รวม VAT ${Number(shop.vat_rate)}%`}
+            value={formatMoney(Number(p.sale_price) + vatOf(p.sale_price, shop.vat_rate))}
+          />
+        )}
         <Fact label="ขั้นต่ำ" value={Number(p.min_stock) > 0 ? formatQty(p.min_stock) : "-"} />
-        {isAdmin && <Fact label="ต้นทุนเฉลี่ย" value={formatMoney(p.avg_cost)} />}
       </dl>
+
+      {isAdmin && (
+        <>
+          <h2 className="font-semibold">ล็อตคงเหลือ (ตัดออกจากบนลงล่าง)</h2>
+          <LotList lots={lots} />
+        </>
+      )}
 
       <h2 className="font-semibold">สมุดสต็อก</h2>
       <MovementList moves={moves} />
@@ -91,6 +105,35 @@ function Fact({ label, value }) {
       <dt className="text-muted">{label}</dt>
       <dd className="num font-semibold">{value}</dd>
     </div>
+  );
+}
+
+// ล็อตที่ยังมีของ เก่าสุดอยู่บน ของออกตัดจากล็อตบนสุดก่อน (FIFO) เห็นเฉพาะเจ้าของอู่
+function LotList({ lots }) {
+  return (
+    <ul className="divide-y divide-line rounded-xl border border-line">
+      {lots.error && (
+        <li role="alert" className="field-error p-4">
+          {lots.error.message}
+        </li>
+      )}
+      {lots.data?.length === 0 && <li className="p-4 text-muted">ไม่มีของในคลัง</li>}
+      {lots.data?.map((lot) => (
+        <li key={lot.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+          <div className="min-w-0 text-sm">
+            <div className="font-semibold">
+              {lot.receipt_id ? docNo("LOT", lot.receipt_id) : MOVE_LABEL[lot.movement_type]}
+            </div>
+            <div className="text-muted">
+              {formatDate(lot.created_at)} · ทุน/หน่วย {formatMoney(Number(lot.cost_total) / Number(lot.qty))}
+            </div>
+          </div>
+          <span className="num font-bold">
+            {formatQty(lot.qty_left)} <span className="font-normal text-muted">/ {formatQty(lot.qty)}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -180,7 +223,7 @@ function OpeningDialog({ productId, onClose }) {
     >
       <Field label="จำนวน" type="number" inputMode="decimal" step="0.01" min="0.01" required {...register("qty")} />
       <Field
-        label="ต้นทุนต่อหน่วย"
+        label="ต้นทุนต่อหน่วย (ก่อน VAT)"
         type="number"
         inputMode="decimal"
         step="0.01"

@@ -53,12 +53,14 @@ class POOut(BaseModel):
 class POPricedOut(POOut):
     items: list[POItemPricedOut]
     estimated_total: Decimal
+    vat_rate: Decimal
+    estimated_vat: Decimal
 
 
 class GRItemIn(In):
     product_id: int
     qty: Decimal = Field(gt=0, decimal_places=2)
-    total_paid: Decimal = Field(ge=0, decimal_places=2)
+    cost_total: Decimal = Field(ge=0, decimal_places=2)  # ยอดก่อน VAT
 
 
 class GRIn(In):
@@ -94,3 +96,5 @@ class GROut(BaseModel):
 class GRAdminOut(GROut):
     items: list[GRItemAdminOut]
     cost_total: Decimal
+    vat_rate: Decimal
+    vat: Decimal

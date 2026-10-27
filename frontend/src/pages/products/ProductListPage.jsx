@@ -75,7 +75,7 @@ export default function ProductListPage() {
         columns={[
           { label: "รหัส", render: (p) => p.code },
           { label: "ชื่อ", render: (p) => p.name },
-          { label: "ราคาขาย", align: "right", render: (p) => formatMoney(p.sale_price) },
+          { label: "ราคาขาย (ก่อน VAT)", align: "right", render: (p) => formatMoney(p.sale_price) },
           { label: "คงเหลือ", align: "right", render: (p) => `${formatQty(p.qty_on_hand)} ${p.unit}` },
           { label: "สถานะ", render: (p) => <StatusBadge status={productStatus(p)} /> },
         ]}

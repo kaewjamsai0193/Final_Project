@@ -55,11 +55,22 @@ export default function GoodsReceiptDetailPage() {
         ))}
       </ul>
       {isAdmin && (
-        <div className="flex justify-between rounded-lg bg-surface p-3 font-semibold">
-          <span>ต้นทุนรวม</span>
-          <span className="num">{formatMoney(gr.cost_total)}</span>
-        </div>
+        <dl className="space-y-1 rounded-lg bg-surface p-3">
+          <Row label="ต้นทุนรวม (ก่อน VAT)" value={gr.cost_total} />
+          <Row label={`VAT ${Number(gr.vat_rate)}%`} value={gr.vat} />
+          <Row label="ยอดจ่ายรวม VAT" value={Number(gr.cost_total) + Number(gr.vat)} bold />
+        </dl>
       )}
     </DetailLayout>
+  );
+}
+
+// หนึ่งบรรทัดในกล่องสรุปยอด
+function Row({ label, value, bold }) {
+  return (
+    <div className={`flex justify-between ${bold ? "font-semibold" : "text-sm"}`}>
+      <dt>{label}</dt>
+      <dd className="num">{formatMoney(value)}</dd>
+    </div>
   );
 }

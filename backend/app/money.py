@@ -19,3 +19,8 @@ def line_total(qty, unit_price) -> Decimal:
 def unit_cost(cost_total, qty) -> Decimal:
     """ต้นทุนต่อชิ้น เอายอดที่จ่ายหารจำนวน ปัดเป็นสตางค์"""
     return round_money(Decimal(cost_total) / Decimal(qty))
+
+
+def vat_of(amount, rate) -> Decimal:
+    """VAT ที่บวกเพิ่มบนยอดก่อน VAT เช่น 100 อัตรา 7 ได้ 7.00"""
+    return round_money(Decimal(amount) * Decimal(rate) / 100)

@@ -29,7 +29,10 @@ export default function PurchaseOrderDetailPage() {
   ];
   const menu = [];
   if (isAdmin) {
-    menu.push({ label: "บันทึกรูปใบสั่งซื้อ", onClick: () => window.open(`/print/po/${po.id}`, "_blank", "noreferrer") });
+    menu.push({
+      label: "บันทึกรูปใบสั่งซื้อ",
+      onClick: () => window.open(`/print/po/${po.id}`, "_blank", "noreferrer"),
+    });
   }
   if (isAdmin && po.status === "open") {
     menu.push({ label: "ปิดใบสั่งซื้อ", danger: true, onClick: () => setClosing(true) });
@@ -61,10 +64,20 @@ export default function PurchaseOrderDetailPage() {
         ))}
       </ul>
       {isAdmin && (
-        <div className="flex justify-between px-1 font-semibold">
-          <span>ยอดประมาณการ</span>
-          <span className="num">{formatMoney(po.estimated_total)}</span>
-        </div>
+        <dl className="space-y-1 px-1">
+          <div className="flex justify-between text-sm">
+            <dt>ยอดประมาณการ (ก่อน VAT)</dt>
+            <dd className="num">{formatMoney(po.estimated_total)}</dd>
+          </div>
+          <div className="flex justify-between text-sm">
+            <dt>VAT {Number(po.vat_rate)}%</dt>
+            <dd className="num">{formatMoney(po.estimated_vat)}</dd>
+          </div>
+          <div className="flex justify-between font-semibold">
+            <dt>รวม VAT</dt>
+            <dd className="num">{formatMoney(Number(po.estimated_total) + Number(po.estimated_vat))}</dd>
+          </div>
+        </dl>
       )}
 
       {closing && <ClosePoDialog poId={po.id} onClose={() => setClosing(false)} />}

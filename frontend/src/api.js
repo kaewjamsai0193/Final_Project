@@ -26,7 +26,6 @@ function toErrorMessage(data) {
   return "เกิดข้อผิดพลาด กรุณาลองใหม่";
 }
 
-
 // เรียก backend พร้อมแนบ token ถ้า token หมดอายุพากลับหน้าเข้าสู่ระบบ
 export async function api(path, { method = "GET", body } = {}) {
   const token = getToken();
@@ -61,6 +60,9 @@ export const plainNumber = (v) => (v === null || v === undefined || v === "" ? "
 // เงิน 2 ตำแหน่งมีจุลภาค เช่น 1,234.50
 export const formatMoney = (v) =>
   Number(v).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// VAT ที่บวกบนยอดก่อน VAT ปัดเป็นสตางค์ ใช้โชว์ระหว่างกรอก ยอดจริง backend คิดเอง
+export const vatOf = (amount, rate) => Math.round(Number(amount) * Number(rate)) / 100;
 
 // จำนวนแบบไม่มีศูนย์ท้าย เช่น 1.5
 export const formatQty = (v) => Number(v).toLocaleString("th-TH", { maximumFractionDigits: 2 });

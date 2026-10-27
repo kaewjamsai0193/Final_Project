@@ -48,7 +48,7 @@ export default function ProductFormDialog({ initial, onClose, onSaved }) {
       </div>
       <Field label="ชื่อสินค้า" required {...register("name")} />
       <Field
-        label="ราคาขาย (รวม VAT)"
+        label="ราคาขาย (ก่อน VAT)"
         type="number"
         inputMode="decimal"
         step="0.01"

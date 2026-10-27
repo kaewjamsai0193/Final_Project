@@ -1,8 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint, func, text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint, func, select, text
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.db import Base
 
@@ -20,6 +20,7 @@ def created():
 def fk(target, **kw):
     """คอลัมน์ที่อ้างไปตารางอื่น พร้อมทำ index ให้ค้นเร็ว"""
     return mapped_column(ForeignKey(target, **kw), index=True)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -55,13 +56,9 @@ class Product(Base):
     sale_price: Mapped[Decimal] = mapped_column(MONEY)
     min_stock: Mapped[Decimal] = mapped_column(QTY, default=0, server_default="0")
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
-    qty_on_hand: Mapped[Decimal] = mapped_column(QTY, default=0, server_default="0")
-    avg_cost: Mapped[Decimal] = mapped_column(MONEY, default=0, server_default="0")
     __table_args__ = (
         CheckConstraint("sale_price >= 0", name="sale_price"),
         CheckConstraint("min_stock >= 0", name="min_stock"),
-        CheckConstraint("qty_on_hand >= 0", name="qty_on_hand"),
-        CheckConstraint("avg_cost >= 0", name="avg_cost"),
     )
 
 
@@ -70,6 +67,7 @@ class StockMovement(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     product_id: Mapped[int] = fk("products.id")
     qty: Mapped[Decimal] = mapped_column(QTY)
+    qty_left: Mapped[Decimal | None] = mapped_column(QTY)  # ของเข้าแต่ละครั้งคือหนึ่งล็อต จำนวนนี้คือที่ยังไม่ถูกตัดออก (FIFO)
     cost_total: Mapped[Decimal] = mapped_column(MONEY)
     movement_type: Mapped[str] = mapped_column(String(10))
     reason: Mapped[str | None] = mapped_column(Text)
@@ -77,6 +75,9 @@ class StockMovement(Base):
     created_at: Mapped[datetime] = created()
     product: Mapped["Product"] = relationship()
     receipt_id: Mapped[int | None] = fk("goods_receipts.id")
+    allocations: Mapped[list["LotAllocation"]] = relationship(
+        foreign_keys="LotAllocation.movement_id", order_by="LotAllocation.id"
+    )
     __table_args__ = (
         CheckConstraint("movement_type in ('opening','receive','waste','issue','return')", name="type"),
         CheckConstraint(
@@ -85,8 +86,38 @@ class StockMovement(Base):
             name="direction",
         ),
         CheckConstraint("cost_total >= 0", name="cost"),
+        # ล็อตมีแค่ของเข้าจากตั้งต้นกับรับของ ของคืนกลับเข้าล็อตเดิม จึงไม่ใช่ล็อตใหม่
+        CheckConstraint(
+            "(movement_type in ('opening','receive') and qty_left >= 0 and qty_left <= qty)"
+            " or (movement_type not in ('opening','receive') and qty_left is null)",
+            name="qty_left",
+        ),
         CheckConstraint("movement_type <> 'waste' or reason is not null", name="waste_reason"),
         UniqueConstraint("receipt_id", "product_id"),
+    )
+
+
+# คงเหลือคิดจากของที่เหลือในทุกล็อตทุกครั้งที่ดึงสินค้า ไม่เก็บซ้ำ จึงไม่มีทางไม่ตรงกับล็อต
+Product.qty_on_hand = column_property(
+    select(func.coalesce(func.sum(StockMovement.qty_left), 0))
+    .where(StockMovement.product_id == Product.id)
+    .scalar_subquery()
+)
+
+
+# บรรทัดของออกตัดล็อตไหนไปเท่าไหร่ บรรทัดคืนของก็จดแบบเดียวกันว่าคืนเข้าล็อตไหน
+class LotAllocation(Base):
+    __tablename__ = "lot_allocations"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    movement_id: Mapped[int] = fk("stock_movements.id")
+    lot_id: Mapped[int] = fk("stock_movements.id")
+    qty: Mapped[Decimal] = mapped_column(QTY)
+    cost_total: Mapped[Decimal] = mapped_column(MONEY)
+    lot: Mapped["StockMovement"] = relationship(foreign_keys=[lot_id])
+    __table_args__ = (
+        UniqueConstraint("movement_id", "lot_id"),
+        CheckConstraint("qty > 0", name="qty"),
+        CheckConstraint("cost_total >= 0", name="cost"),
     )
 
 
@@ -132,6 +163,7 @@ class GoodsReceipt(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     po_id: Mapped[int | None] = fk("purchase_orders.id")
     supplier_name: Mapped[str] = mapped_column(String(200))
+    vat_rate: Mapped[Decimal] = mapped_column(RATE)  # อัตรา ณ วันรับ ค่าตั้งเปลี่ยนทีหลังใบเก่าไม่เพี้ยน
     created_by: Mapped[int] = fk("users.id")
     created_at: Mapped[datetime] = created()
     items: Mapped[list["StockMovement"]] = relationship(order_by="StockMovement.id")

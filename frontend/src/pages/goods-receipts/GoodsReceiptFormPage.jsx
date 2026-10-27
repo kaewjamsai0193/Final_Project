@@ -3,11 +3,11 @@ import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { api, formatMoney, formatQty, plainNumber } from "../../api";
+import { api, formatMoney, formatQty, plainNumber, vatOf } from "../../api";
 import Field from "../../components/Field";
 import Modal from "../../components/Modal";
 
-// ฟอร์มรับของตามใบสั่งซื้อ เลือกใบแล้วของที่ยังค้างรับเติมให้เอง แก้จำนวนที่มาจริงกับกรอกยอดที่จ่าย
+// ฟอร์มรับของตามใบสั่งซื้อ เลือกใบแล้วของที่ยังค้างรับเติมให้เอง แก้จำนวนที่มาจริงกับกรอกยอดก่อน VAT
 // (ซื้อด่วนแบบไม่มีใบสั่งซื้อ ทำจากปุ่มในใบงาน เฟส 5)
 export default function GoodsReceiptFormPage() {
   const navigate = useNavigate();
@@ -19,6 +19,7 @@ export default function GoodsReceiptFormPage() {
     queryFn: () => api("/purchase-orders?status=open"),
   });
   const po = useQuery({ queryKey: ["purchase-orders", poId], enabled: !!poId });
+  const { data: shop } = useQuery({ queryKey: ["settings"] });
 
   const { register, handleSubmit, control, watch } = useForm({ defaultValues: { items: [] } });
   const { fields, remove, replace } = useFieldArray({ control, name: "items" });
@@ -35,14 +36,15 @@ export default function GoodsReceiptFormPage() {
           label: `${i.product_code} — ${i.product_name} (${i.unit})`,
           remaining: i.qty_remaining,
           qty: plainNumber(i.qty_remaining),
-          total_paid: "",
+          cost_total: "",
         })),
     );
   }, [po.data, replace]);
 
   // ตัวเลขนี้แค่โชว์ระหว่างกรอก backend คิดใหม่เองตอนบันทึก
-  const unitCost = (it) => (Number(it.qty) > 0 ? Number(it.total_paid || 0) / Number(it.qty) : 0);
-  const totalPaid = items.reduce((sum, it) => sum + Number(it.total_paid || 0), 0);
+  const unitCost = (it) => (Number(it.qty) > 0 ? Number(it.cost_total || 0) / Number(it.qty) : 0);
+  const subtotal = items.reduce((sum, it) => sum + Number(it.cost_total || 0), 0);
+  const vat = vatOf(subtotal, shop?.vat_rate ?? 0);
 
   const save = useMutation({
     mutationFn: (form) =>
@@ -50,7 +52,7 @@ export default function GoodsReceiptFormPage() {
         method: "POST",
         body: {
           po_id: Number(poId),
-          items: form.items.map((it) => ({ product_id: it.product_id, qty: it.qty, total_paid: it.total_paid })),
+          items: form.items.map((it) => ({ product_id: it.product_id, qty: it.qty, cost_total: it.cost_total })),
         },
       }),
     onSuccess: (gr) => {
@@ -76,8 +78,11 @@ export default function GoodsReceiptFormPage() {
           )}
           <div className="flex items-center gap-3">
             <div className="mr-auto text-sm">
-              <div className="text-muted">ยอดจ่ายรวม</div>
-              <div className="num text-lg font-bold">{formatMoney(totalPaid)}</div>
+              <div className="text-muted">ยอดจ่ายรวม VAT</div>
+              <div className="num text-lg font-bold">{formatMoney(subtotal + vat)}</div>
+              <div className="num text-xs text-muted">
+                ก่อน VAT {formatMoney(subtotal)} + VAT {formatMoney(vat)}
+              </div>
             </div>
             <button className="btn btn-primary" disabled={save.isPending || fields.length === 0}>
               {save.isPending ? "กำลังบันทึก…" : "บันทึกรับของ"}
@@ -135,17 +140,17 @@ export default function GoodsReceiptFormPage() {
                 {...register(`items.${i}.qty`)}
               />
               <Field
-                label="ยอดที่จ่ายจริง (บาท)"
+                label="ยอดก่อน VAT (บาท)"
                 type="number"
                 inputMode="decimal"
                 step="0.01"
                 min="0"
                 required
-                {...register(`items.${i}.total_paid`)}
+                {...register(`items.${i}.cost_total`)}
               />
             </div>
             <div className="flex justify-between rounded-lg bg-surface px-3 py-2 text-sm">
-              <span className="text-muted">ต้นทุน/หน่วย</span>
+              <span className="text-muted">ต้นทุน/หน่วย (ก่อน VAT)</span>
               <span className="num font-semibold">{formatMoney(unitCost(items[i]))}</span>
             </div>
           </div>

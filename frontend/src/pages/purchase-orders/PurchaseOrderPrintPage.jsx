@@ -134,12 +134,18 @@ function PoDocument({ po, shop }) {
           ))}
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-ink text-base font-bold">
-            <td colSpan={6} className="px-2 py-1 text-right">
-              ยอดประมาณการ
-            </td>
-            <td className="num px-2 py-1 text-right">{formatMoney(po.estimated_total)}</td>
-          </tr>
+          {[
+            ["รวมก่อน VAT", po.estimated_total, "border-t-2 border-ink"],
+            [`VAT ${Number(po.vat_rate)}%`, po.estimated_vat, ""],
+            ["ยอดประมาณการรวม VAT", Number(po.estimated_total) + Number(po.estimated_vat), "text-base font-bold"],
+          ].map(([label, value, style]) => (
+            <tr key={label} className={style}>
+              <td colSpan={6} className="px-2 py-1 text-right">
+                {label}
+              </td>
+              <td className="num px-2 py-1 text-right">{formatMoney(value)}</td>
+            </tr>
+          ))}
         </tfoot>
       </table>
 

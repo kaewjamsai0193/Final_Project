@@ -60,7 +60,7 @@ export default function PurchaseOrderFormPage() {
           )}
           <div className="flex items-center gap-3">
             <div className="mr-auto text-sm">
-              <div className="text-muted">ยอดประมาณการ</div>
+              <div className="text-muted">ยอดประมาณการ (ก่อน VAT)</div>
               <div className="num text-lg font-bold">{formatMoney(estimate)}</div>
             </div>
             <button className="btn btn-primary" disabled={save.isPending || fields.length === 0}>
@@ -112,7 +112,7 @@ export default function PurchaseOrderFormPage() {
                     {...register(`items.${i}.qty`)}
                   />
                   <Field
-                    label="ราคา/หน่วย"
+                    label="ราคา/หน่วย (ก่อน VAT)"
                     hint="ไม่บังคับ"
                     type="number"
                     inputMode="decimal"

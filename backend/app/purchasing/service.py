@@ -5,9 +5,9 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 
 from app.db import get_or_404, lock_shop
-from app.models import GoodsReceipt, PurchaseOrder, PurchaseOrderItem, StockMovement
-from app.money import format_qty, line_total, unit_cost
-from app.stock.service import add_stock, products_by_id
+from app.models import GoodsReceipt, PurchaseOrder, PurchaseOrderItem, Setting, StockMovement
+from app.money import format_qty, line_total, unit_cost, vat_of
+from app.stock.service import products_by_id, stock_in
 
 
 def received_by_product(db, po_id) -> dict[int, Decimal]:
@@ -76,21 +76,20 @@ def create_goods_receipt(db, data, user) -> GoodsReceipt:
     if not supplier_name:
         raise HTTPException(422, "กรุณากรอกชื่อร้าน")
 
-    # 3. สร้างใบรับของ แล้วเอาของเข้าคลังกับจดสมุดสต็อกทีละสินค้า
-    gr = GoodsReceipt(po_id=data.po_id, supplier_name=supplier_name, created_by=user.id)
+    # 3. สร้างใบรับของ แล้วเอาของเข้าคลังเป็นล็อตใหม่ทีละสินค้า ต้นทุนคือยอดก่อน VAT
+    vat_rate = db.get(Setting, 1).vat_rate
+    gr = GoodsReceipt(po_id=data.po_id, supplier_name=supplier_name, vat_rate=vat_rate, created_by=user.id)
     db.add(gr)
     db.flush()
     for item in data.items:
-        add_stock(products[item.product_id], item.qty, item.total_paid)
-        db.add(
-            StockMovement(
-                product_id=item.product_id,
-                receipt_id=gr.id,
-                qty=item.qty,
-                cost_total=item.total_paid,
-                movement_type="receive",
-                created_by=user.id,
-            )
+        stock_in(
+            db,
+            products[item.product_id],
+            item.qty,
+            item.cost_total,
+            receipt_id=gr.id,
+            movement_type="receive",
+            created_by=user.id,
         )
 
     # 4. รับครบทุกรายการแล้ว ปิดใบสั่งซื้อให้เอง
@@ -120,6 +119,10 @@ def po_view(db, po) -> dict:
         }
         for i in po.items
     ]
+    estimated_total = sum(
+        (line_total(i["qty"], i["unit_price"]) for i in items if i["unit_price"] is not None), Decimal(0)
+    )
+    vat_rate = db.get(Setting, 1).vat_rate  # ใบสั่งซื้อเป็นแค่ยอดประมาณ ใช้อัตราปัจจุบัน
     receive_state = None  # ปิดแล้วไม่ต้องบอกสถานะรับของ
     if po.status == "open":
         receive_state = "partial" if got else "waiting"
@@ -137,14 +140,14 @@ def po_view(db, po) -> dict:
         "created_at": po.created_at,
         "created_by_name": po.creator.full_name,
         "items": items,
-        "estimated_total": sum(
-            (line_total(i["qty"], i["unit_price"]) for i in items if i["unit_price"] is not None), Decimal(0)
-        ),
+        "estimated_total": estimated_total,
+        "vat_rate": vat_rate,
+        "estimated_vat": vat_of(estimated_total, vat_rate),
     }
 
 
 def gr_view(gr) -> dict:
-    """รวมข้อมูลใบรับของที่หน้าจอต้องใช้ ชื่อสินค้า จำนวน ต้นทุน"""
+    """รวมข้อมูลใบรับของที่หน้าจอต้องใช้ ชื่อสินค้า จำนวน ต้นทุน VAT"""
     items = [
         {
             "product_id": m.product_id,
@@ -157,6 +160,7 @@ def gr_view(gr) -> dict:
         }
         for m in gr.items
     ]
+    cost_total = sum((i["cost_total"] for i in items), Decimal(0))
     return {
         "id": gr.id,
         "display_number": f"LOT-{gr.id:05d}",
@@ -166,5 +170,7 @@ def gr_view(gr) -> dict:
         "created_at": gr.created_at,
         "created_by_name": gr.creator.full_name,
         "items": items,
-        "cost_total": sum((i["cost_total"] for i in items), Decimal(0)),
+        "cost_total": cost_total,
+        "vat_rate": gr.vat_rate,
+        "vat": vat_of(cost_total, gr.vat_rate),
     }
