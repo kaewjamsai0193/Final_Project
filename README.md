@@ -123,7 +123,6 @@ frontend/
     api.js  auth.jsx  main.jsx   เรียก API, จำผู้ใช้ที่ล็อกอิน, เส้นทางหน้าเว็บ
     components/                  ชิ้นส่วนที่หลายหน้าใช้ร่วมกัน
     pages/                       หนึ่งข้อมูลหนึ่งโฟลเดอร์ (products, purchase-orders, goods-receipts, users, settings)
-db/init/              สร้างฐาน garage_test สำหรับเทสต์
 docker-compose.yml
 .env.example          แม่แบบไฟล์ตั้งค่า (ไฟล์ .env จริงไม่เข้า git)
 ```
