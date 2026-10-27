@@ -40,7 +40,13 @@ function SettingsForm({ initial }) {
         <h2 className="font-semibold">ข้อมูลบนหัวเอกสาร</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="ชื่ออู่" {...register("shop_name")} />
-          <Field label="เลขประจำตัวผู้เสียภาษี" {...register("shop_tax_id")} />
+          <Field
+            label="เลขประจำตัวผู้เสียภาษี"
+            inputMode="numeric"
+            pattern="[0-9\-]*"
+            title="ใส่ได้เฉพาะตัวเลข"
+            {...register("shop_tax_id")}
+          />
           <Field label="ที่อยู่" {...register("shop_address")} />
         </div>
       </section>

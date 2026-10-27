@@ -3,11 +3,11 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
-from app.schemas import In, Out
+from app.schemas import ASCII, In, Out
 
 
 class ProductIn(In):
-    code: str = Field(min_length=1, max_length=50)
+    code: str = Field(min_length=1, max_length=50, pattern=ASCII)
     name: str = Field(min_length=1, max_length=200)
     unit: str = Field(min_length=1, max_length=20)
     sale_price: Decimal = Field(ge=0, decimal_places=2)  # ก่อน VAT

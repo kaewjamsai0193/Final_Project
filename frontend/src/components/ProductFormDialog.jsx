@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { api, plainNumber } from "../api";
+import { api, ASCII_ONLY, plainNumber } from "../api";
 import Field from "./Field";
 import Modal from "./Modal";
 
@@ -43,7 +43,13 @@ export default function ProductFormDialog({ initial, onClose, onSaved }) {
       }
     >
       <div className="grid grid-cols-2 gap-3">
-        <Field label="รหัสสินค้า" required autoCapitalize="characters" {...register("code")} />
+        <Field
+          label="รหัสสินค้า (อังกฤษ/ตัวเลข)"
+          required
+          autoCapitalize="characters"
+          {...ASCII_ONLY}
+          {...register("code")}
+        />
         <Field label="หน่วย" required placeholder="ชิ้น, ขวด" {...register("unit")} />
       </div>
       <Field label="ชื่อสินค้า" required {...register("name")} />

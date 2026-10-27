@@ -8,7 +8,7 @@ from app.schemas import In, Out
 class SettingsIn(In):
     shop_name: str = Field(max_length=200)
     shop_address: str
-    shop_tax_id: str = Field(max_length=20)
+    shop_tax_id: str = Field(max_length=20, pattern=r"^[0-9-]*$")
     vat_rate: Decimal = Field(ge=0, le=100, decimal_places=2)
 
 

@@ -5,6 +5,9 @@ export const getToken = () => localStorage.getItem("token");
 export const setToken = (token) => localStorage.setItem("token", token);
 export const removeToken = () => localStorage.removeItem("token");
 
+// ช่องที่รับแค่อังกฤษ ตัวเลข สัญลักษณ์ (รหัสผ่าน รหัสสินค้า) ตรงกับ ASCII ฝั่ง backend เบราว์เซอร์ไม่ยอมให้กดบันทึกถ้าไม่ตรง
+export const ASCII_ONLY = { pattern: "[!-~]+", title: "ใช้ได้เฉพาะอังกฤษ ตัวเลข และสัญลักษณ์ ห้ามมีภาษาไทยหรือเว้นวรรค" };
+
 // แปลงข้อผิดพลาดของช่องกรอกหนึ่งช่องจาก backend เป็นภาษาไทย
 function validationMessage({ type, ctx = {} }) {
   const messages = {
@@ -14,6 +17,7 @@ function validationMessage({ type, ctx = {} }) {
     less_than_equal: `ต้องไม่เกิน ${ctx.le}`,
     string_too_short: "ข้อความสั้นเกินไป",
     string_too_long: "ข้อความยาวเกินไป",
+    string_pattern_mismatch: "มีตัวอักษรที่ใช้ไม่ได้ เช่น ภาษาไทย",
   };
   return messages[type] ?? "รูปแบบข้อมูลไม่ถูกต้อง";
 }

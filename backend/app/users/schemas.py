@@ -2,11 +2,12 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
-from app.schemas import In, Out
+from app.schemas import ASCII, In, Out
 
 Role = Literal["admin", "employee", "mechanic"]
 # ไม่มีอีเมลส่ง null มา ตัวกรองละเอียดให้ช่อง type="email" ของเบราว์เซอร์ทำ
-Email = Annotated[str, Field(max_length=200, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+Email = Annotated[str, Field(max_length=200, pattern=r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")]
+Password = Annotated[str, Field(min_length=6, pattern=ASCII)]
 
 
 class UserOut(Out):
@@ -33,7 +34,7 @@ class UserCreate(In):
     full_name: str = Field(min_length=1, max_length=100)
     email: Email | None = None
     role: Role
-    password: str = Field(min_length=6)
+    password: Password
 
 
 class UserUpdate(In):
@@ -41,7 +42,7 @@ class UserUpdate(In):
     email: Email | None = None
     role: Role | None = None
     is_active: bool | None = None
-    password: str | None = Field(default=None, min_length=6)
+    password: Password | None = None
 
 
 class ForgotIn(In):
@@ -50,4 +51,4 @@ class ForgotIn(In):
 
 class ResetIn(In):
     token: str
-    password: str = Field(min_length=6)
+    password: Password

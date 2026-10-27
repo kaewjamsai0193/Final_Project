@@ -14,7 +14,7 @@ class POItemIn(In):
 
 class POIn(In):
     supplier_name: str = Field(min_length=1, max_length=200)
-    supplier_phone: str | None = None
+    supplier_phone: str | None = Field(default=None, max_length=20, pattern=r"^[0-9+ -]*$")
     supplier_address: str | None = None
     note: str | None = None
     items: list[POItemIn] = Field(min_length=1)

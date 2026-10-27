@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useOutletContext, useParams } from "react-router-dom";
-import { api } from "../../api";
+import { api, ASCII_ONLY } from "../../api";
 import { ROLE_NAME, useAuth } from "../../auth";
 import Field from "../../components/Field";
 import Modal from "../../components/Modal";
@@ -78,6 +78,8 @@ function UserForm({ initial, close }) {
         label="ชื่อผู้ใช้ (อังกฤษ/ตัวเลข)"
         required
         disabled={isEdit}
+        pattern="[A-Za-z0-9_.\-]+"
+        title="ใช้ได้เฉพาะอังกฤษ ตัวเลข และ _ . -"
         autoCapitalize="none"
         autoComplete="off"
         {...register("username")}
@@ -115,9 +117,10 @@ function UserForm({ initial, close }) {
       {(!isEdit || changingPassword) && (
         <Field
           label={isEdit ? "รหัสผ่านใหม่" : "รหัสผ่าน"}
-          hint="อย่างน้อย 6 ตัว"
+          hint="อย่างน้อย 6 ตัว ใช้อังกฤษ ตัวเลข หรือสัญลักษณ์"
           type="password"
           minLength={6}
+          {...ASCII_ONLY}
           required
           autoComplete="new-password"
           {...register("password")}

@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Link, useSearchParams } from "react-router-dom";
-import { api } from "../api";
+import { api, ASCII_ONLY } from "../api";
 import AuthShell from "../components/AuthShell";
 import Field from "../components/Field";
 
@@ -41,9 +41,10 @@ export default function ResetPasswordPage() {
         {token ? (
           <Field
             label="รหัสผ่านใหม่"
-            hint="อย่างน้อย 6 ตัว"
+            hint="อย่างน้อย 6 ตัว ใช้อังกฤษ ตัวเลข หรือสัญลักษณ์"
             type="password"
             minLength={6}
+            {...ASCII_ONLY}
             required
             autoComplete="new-password"
             {...register("password")}

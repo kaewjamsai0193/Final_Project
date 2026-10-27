@@ -76,7 +76,14 @@ export default function PurchaseOrderFormPage() {
           ข้อมูลร้านเพิ่มเติม (ไม่บังคับ)
         </summary>
         <div className="space-y-3 pb-3">
-          <Field label="เบอร์โทรร้าน" type="tel" inputMode="tel" {...register("supplier_phone")} />
+          <Field
+            label="เบอร์โทรร้าน"
+            type="tel"
+            inputMode="tel"
+            pattern="[0-9+\- ]*"
+            title="ใส่ได้เฉพาะตัวเลข"
+            {...register("supplier_phone")}
+          />
           <Field label="ที่อยู่ร้าน" {...register("supplier_address")} />
           <Field label="หมายเหตุ" {...register("note")} />
         </div>

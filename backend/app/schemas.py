@@ -1,5 +1,8 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+# อังกฤษ ตัวเลข สัญลักษณ์บนแป้น ไม่มีภาษาไทยและเว้นวรรค ใช้กับรหัสผ่าน รหัสสินค้า
+ASCII = r"^[!-~]+$"
+
 
 class In(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
