@@ -45,7 +45,7 @@ class UserUpdate(In):
 
 
 class ForgotIn(In):
-    username: str
+    email: Email
 
 
 class ResetIn(In):

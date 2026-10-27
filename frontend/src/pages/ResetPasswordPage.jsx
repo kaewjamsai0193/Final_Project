@@ -5,15 +5,15 @@ import { api } from "../api";
 import AuthShell from "../components/AuthShell";
 import Field from "../components/Field";
 
-// ลืมรหัสผ่าน: ไม่มี token ใน URL ให้กรอกชื่อผู้ใช้ขอลิงก์ทางอีเมล, มี token (กดลิงก์มาจากอีเมล) ให้ตั้งรหัสใหม่
+// ลืมรหัสผ่าน: ไม่มี token ใน URL ให้กรอกอีเมลขอลิงก์, มี token (กดลิงก์มาจากอีเมล) ให้ตั้งรหัสใหม่
 export default function ResetPasswordPage() {
   const token = useSearchParams()[0].get("token");
-  const { register, handleSubmit } = useForm({ defaultValues: { username: "", password: "" } });
+  const { register, handleSubmit } = useForm({ defaultValues: { email: "", password: "" } });
   const submit = useMutation({
     mutationFn: (form) =>
       token
         ? api("/auth/reset", { method: "POST", body: { token, password: form.password } })
-        : api("/auth/forgot", { method: "POST", body: { username: form.username } }),
+        : api("/auth/forgot", { method: "POST", body: { email: form.email } }),
   });
   const backToLogin = (
     <Link to="/login" className="btn btn-ghost w-full">
@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
           <p role="status">
             {token
               ? "เข้าสู่ระบบด้วยรหัสใหม่ได้เลย"
-              : "ถ้าบัญชีนี้มีอีเมลในระบบ จะได้ลิงก์ตั้งรหัสใหม่ทางอีเมล ใช้ได้ภายใน 30 นาที ถ้าไม่มีอีเมลหรือไม่ได้รับ ให้ติดต่อเจ้าของอู่"}
+              : "ถ้าอีเมลนี้อยู่ในระบบ จะได้ลิงก์ตั้งรหัสใหม่ทางอีเมล ใช้ได้ภายใน 30 นาที ถ้าไม่มีอีเมลหรือไม่ได้รับ ให้ติดต่อเจ้าของอู่"}
           </p>
           {backToLogin}
         </div>
@@ -49,7 +49,7 @@ export default function ResetPasswordPage() {
             {...register("password")}
           />
         ) : (
-          <Field label="ชื่อผู้ใช้" autoComplete="username" autoCapitalize="none" required {...register("username")} />
+          <Field label="อีเมล" type="email" autoComplete="email" autoCapitalize="none" required {...register("email")} />
         )}
         {submit.error && (
           <p role="alert" className="field-error">

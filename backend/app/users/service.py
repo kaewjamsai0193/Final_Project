@@ -74,16 +74,18 @@ def update_user(db, user_id: int, data, actor: User) -> User:
     return user
 
 
-def send_reset_email(to: str, link: str):
+def send_reset_email(to: str, username: str, link: str):
     """ส่งลิงก์ตั้งรหัสใหม่ทางอีเมล ยังไม่ตั้ง SMTP_HOST ใน .env พิมพ์ลิงก์ลง log ของ api แทน (ไว้ทดสอบ)"""
     if not os.environ.get("SMTP_HOST"):
-        print(f"[ยังไม่ตั้ง SMTP] ลิงก์ตั้งรหัสใหม่ของ {to}: {link}", flush=True)
+        print(f"[ยังไม่ตั้ง SMTP] ลิงก์ตั้งรหัสใหม่ของ {username} ({to}): {link}", flush=True)
         return
     msg = EmailMessage()
     msg["Subject"] = "ตั้งรหัสผ่านใหม่ - อู่ซ่อมรถ"
     msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = to
-    msg.set_content(f"กดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ ใช้ได้ครั้งเดียวภายใน 30 นาที\n{link}\n\nถ้าไม่ได้ขอ ไม่ต้องทำอะไร")
+    msg.set_content(
+        f"ชื่อผู้ใช้: {username}\nกดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ ใช้ได้ครั้งเดียวภายใน 30 นาที\n{link}\n\nถ้าไม่ได้ขอ ไม่ต้องทำอะไร"
+    )
     with smtplib.SMTP(os.environ["SMTP_HOST"], int(os.environ.get("SMTP_PORT", "587"))) as smtp:
         smtp.starttls()
         smtp.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])

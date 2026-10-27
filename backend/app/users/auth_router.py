@@ -1,7 +1,7 @@
 import os
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.auth import create_reset_token, create_token, current_user, password_hash, reset_token_user
 from app.db import get_db
@@ -31,12 +31,14 @@ def me(user: User = Depends(current_user)):
 # ponytail: ยังไม่จำกัดจำนวนครั้ง (เหมือน /login) ถ้าเปิดให้เข้าจากนอกร้านค่อยเพิ่ม rate limit
 @router.post("/forgot", status_code=204)
 def forgot(data: ForgotIn, tasks: BackgroundTasks, db=Depends(get_db)):
-    """ขอลิงก์ตั้งรหัสใหม่ทางอีเมล ตอบเหมือนกันทุกกรณี ไม่บอกว่ามีชื่อผู้ใช้นี้หรือมีอีเมลไหม
-    ส่งเมลเบื้องหลัง เวลาตอบจึงไม่ฟ้องว่าส่งจริงหรือเปล่า ลิงก์ใช้ APP_URL จาก .env ไม่เชื่อ Host ที่ส่งมา"""
-    user = db.scalar(select(User).where(User.username == data.username))
-    if user and user.is_active and user.email:
-        app_url = os.environ.get("APP_URL", "http://localhost:5173").rstrip("/")
-        tasks.add_task(send_reset_email, user.email, f"{app_url}/reset-password?token={create_reset_token(user)}")
+    """ขอลิงก์ตั้งรหัสใหม่ทางอีเมล ตอบเหมือนกันทุกกรณี ไม่บอกว่ามีอีเมลนี้ในระบบไหม
+    ส่งเมลเบื้องหลัง เวลาตอบจึงไม่ฟ้องว่าส่งจริงหรือเปล่า ลิงก์ใช้ APP_URL จาก .env ไม่เชื่อ Host ที่ส่งมา
+    อีเมลซ้ำกันได้ หลายบัญชีใช้อีเมลเดียวกันได้ลิงก์แยกบัญชีละฉบับ"""
+    app_url = os.environ.get("APP_URL", "http://localhost:5173").rstrip("/")
+    users = db.scalars(select(User).where(func.lower(User.email) == data.email.lower(), User.is_active))
+    for user in users:
+        link = f"{app_url}/reset-password?token={create_reset_token(user)}"
+        tasks.add_task(send_reset_email, user.email, user.username, link)
 
 
 @router.post("/reset", status_code=204)
