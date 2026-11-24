@@ -4,12 +4,13 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
-from app.users import auth_router as auth
-from app.users.service import ensure_admin
-from app.settings import router as settings
-from app.users import router as users
-from app.stock import router as stock
 from app.purchasing import router as purchasing
+from app.settings import router as settings
+from app.stock import router as stock
+from app.users import auth_router as auth
+from app.users import router as users
+from app.users.service import ensure_admin
+
 
 @asynccontextmanager
 async def lifespan(_app):
@@ -24,6 +25,7 @@ app.include_router(users.router)
 app.include_router(settings.router)
 app.include_router(stock.router)
 app.include_router(purchasing.router)
+
 
 @app.exception_handler(IntegrityError)
 def handle_integrity_error(_request, _exc):

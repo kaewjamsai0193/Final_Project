@@ -83,9 +83,7 @@ def send_reset_email(to: str, username: str, link: str):
     msg["Subject"] = "ตั้งรหัสผ่านใหม่ - อู่ซ่อมรถ"
     msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = to
-    msg.set_content(
-        f"ชื่อผู้ใช้: {username}\nกดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ ใช้ได้ครั้งเดียวภายใน 30 นาที\n{link}\n\nถ้าไม่ได้ขอ ไม่ต้องทำอะไร"
-    )
+    msg.set_content(f"ชื่อผู้ใช้: {username}\nกดลิงก์นี้เพื่อตั้งรหัสผ่านใหม่ ใช้ได้ครั้งเดียวภายใน 30 นาที\n{link}\n\nถ้าไม่ได้ขอ ไม่ต้องทำอะไร")
     with smtplib.SMTP(os.environ["SMTP_HOST"], int(os.environ.get("SMTP_PORT", "587"))) as smtp:
         smtp.starttls()
         smtp.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])

@@ -8,10 +8,8 @@ import LoginPage from "./pages/LoginPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AppLayout from "./components/AppLayout";
 import SettingsPage from "./pages/settings/SettingsPage";
-import UserFormPage from "./pages/users/UserFormPage";
 import UserListPage from "./pages/users/UserListPage";
 import ProductDetailPage from "./pages/products/ProductDetailPage";
-import ProductFormPage from "./pages/products/ProductFormPage";
 import ProductListPage from "./pages/products/ProductListPage";
 import GoodsReceiptDetailPage from "./pages/goods-receipts/GoodsReceiptDetailPage";
 import GoodsReceiptFormPage from "./pages/goods-receipts/GoodsReceiptFormPage";
@@ -56,16 +54,7 @@ createRoot(document.getElementById("root")).render(
             }
           >
             <Route index element={<Navigate to="/stock" replace />} />
-            <Route path="stock" element={<ProductListPage />}>
-              <Route
-                path="new"
-                element={
-                  <Guard roles={STAFF}>
-                    <ProductFormPage />
-                  </Guard>
-                }
-              />
-            </Route>
+            <Route path="stock" element={<ProductListPage />} />
             <Route path="stock/:id" element={<ProductDetailPage />} />
             <Route
               element={
@@ -75,10 +64,7 @@ createRoot(document.getElementById("root")).render(
               }
             >
               <Route path="settings" element={<SettingsPage />} />
-              <Route path="settings/users" element={<UserListPage />}>
-                <Route path="new" element={<UserFormPage />} />
-                <Route path=":id" element={<UserFormPage />} />
-              </Route>
+              <Route path="settings/users/:id?" element={<UserListPage />} />
             </Route>
             <Route
               element={
@@ -87,20 +73,18 @@ createRoot(document.getElementById("root")).render(
                 </Guard>
               }
             >
-              <Route path="purchase-orders" element={<PurchaseOrderListPage />}>
-                <Route
-                  path="new"
-                  element={
-                    <Guard roles={ADMIN}>
-                      <PurchaseOrderFormPage />
-                    </Guard>
-                  }
-                />
-              </Route>
+              <Route path="purchase-orders" element={<PurchaseOrderListPage />} />
+              <Route
+                path="purchase-orders/new"
+                element={
+                  <Guard roles={ADMIN}>
+                    <PurchaseOrderFormPage />
+                  </Guard>
+                }
+              />
               <Route path="purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
-              <Route path="goods-receipts" element={<GoodsReceiptListPage />}>
-                <Route path="new" element={<GoodsReceiptFormPage />} />
-              </Route>
+              <Route path="goods-receipts" element={<GoodsReceiptListPage />} />
+              <Route path="goods-receipts/new" element={<GoodsReceiptFormPage />} />
               <Route path="goods-receipts/:id" element={<GoodsReceiptDetailPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

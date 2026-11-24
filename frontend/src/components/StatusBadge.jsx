@@ -27,7 +27,6 @@ export default function StatusBadge({ status }) {
   return <span className={`badge badge-${tone}`}>{text}</span>;
 }
 
-
 // ป้ายที่มาของใบรับของ มีใบสั่งซื้อโชว์เลขใบ ไม่มีโชว์ซื้อด่วน
 export const SourceBadge = ({ gr }) =>
   gr.po_id ? <span className="badge badge-info">{gr.po_number}</span> : <StatusBadge status="quick" />;

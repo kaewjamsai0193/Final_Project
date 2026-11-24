@@ -2,19 +2,23 @@ import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-
 // หน้าต่างป๊อปอัพ เปิดทันทีที่วาด อยากปิดก็เลิกวาด กด Esc หรือคลิกข้างนอกจะเรียก onClose
 // ถ้าส่ง onSubmit มาจะเป็นฟอร์ม วาดไว้ท้าย <body> กันสไตล์ของกล่องแม่มาทับ
 export default function Modal({ title, onClose, onSubmit, footer, children }) {
   const ref = useRef(null);
 
-  useEffect(() => ref.current.showModal(), []);
+  // เปิดแล้วโฟกัสที่ตัวกล่อง ไม่ให้ปุ่ม X โดนโฟกัสจนมีกรอบโผล่ กด Tab ต่อก็เข้าช่องแรกได้ตามปกติ
+  useEffect(() => {
+    ref.current.showModal();
+    ref.current.focus();
+  }, []);
 
   const Body = onSubmit ? "form" : "div";
   return createPortal(
     <dialog
       ref={ref}
-      className="modal"
+      tabIndex={-1}
+      className="modal outline-none"
       aria-label={title}
       onCancel={(e) => {
         e.preventDefault();

@@ -1,8 +1,10 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
+from app.money import unit_cost
 from app.schemas import ASCII, In, Out
 
 
@@ -29,6 +31,11 @@ class LotOut(Out):
     qty_left: Decimal
     cost_total: Decimal
 
+    @computed_field
+    def unit_cost(self) -> Decimal:
+        """ต้นทุนต่อชิ้น 2 ตำแหน่ง คิดที่ backend หน้าจอไม่ต้องหารเอง"""
+        return unit_cost(self.cost_total, self.qty)
+
 
 class MovementOut(BaseModel):
     id: int
@@ -51,3 +58,8 @@ class OpeningIn(In):
     qty: Decimal = Field(gt=0, decimal_places=2)
     unit_cost: Decimal = Field(ge=0, decimal_places=2)
     reason: str = Field(min_length=1)
+
+
+class OpeningImportIn(In):
+    # แถวจากไฟล์ Excel เรียงตามแถวในไฟล์ (แถวแรกคือแถว 2 ของ Excel) คีย์ code, qty, unit_cost, reason
+    rows: list[dict[str, Any]] = Field(min_length=1, max_length=5000)

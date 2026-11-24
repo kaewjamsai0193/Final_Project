@@ -5,7 +5,7 @@ from app.auth import admin, current_user, staff
 from app.db import get_db, get_or_404
 from app.models import Product, StockMovement, User
 from app.stock import service
-from app.stock.schemas import LotOut, MovementOut, OpeningIn, ProductIn, ProductOut, WasteIn
+from app.stock.schemas import LotOut, MovementOut, OpeningImportIn, OpeningIn, ProductIn, ProductOut, WasteIn
 
 router = APIRouter(prefix="/api", tags=["stock"])
 
@@ -75,3 +75,9 @@ def waste(data: WasteIn, db=Depends(get_db), user=Depends(staff)):
 def add_opening(data: OpeningIn, db=Depends(get_db), user=Depends(admin)):
     """เจ้าของอู่ลงสต็อกตั้งต้น"""
     return service.add_opening(db, data, user)
+
+
+@router.post("/stock/opening/import")
+def import_opening(data: OpeningImportIn, db=Depends(get_db), user=Depends(admin)):
+    """เจ้าของอู่นำเข้าสต็อกตั้งต้นจากไฟล์ Excel ทีเดียวหลายรายการ"""
+    return {"imported": service.import_opening(db, data.rows, user)}

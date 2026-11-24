@@ -3,41 +3,47 @@ import { useRef } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { ROLE_NAME, useAuth } from "../auth";
 
-// เมนูหลัก group ต้องตรงกับชื่อใน GROUPS
-const GROUPS = ["คลังสินค้า"];
+// เมนูหลัก staffOnly = ช่างไม่เห็น
 const MENU = [
-  { to: "/stock", label: "สต็อก", icon: Package, group: "คลังสินค้า" },
-  { to: "/purchase-orders", label: "สั่งซื้อ", icon: ClipboardList, group: "คลังสินค้า", staffOnly: true },
-  { to: "/goods-receipts", label: "รับของ", icon: Truck, group: "คลังสินค้า", staffOnly: true },
+  { to: "/stock", label: "สต็อก", icon: Package },
+  { to: "/purchase-orders", label: "สั่งซื้อ", icon: ClipboardList, staffOnly: true },
+  { to: "/goods-receipts", label: "รับของ", icon: Truck, staffOnly: true },
 ];
 
 // class ของลิงก์เมนู เปลี่ยนสีเมื่อเป็นหน้าปัจจุบัน
 const linkClass = ({ isActive }) =>
-  `flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-150 ${
-    isActive ? "bg-accent-soft font-semibold text-accent-ink" : "text-muted hover:bg-surface hover:text-ink"
+  `flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-lg px-3 transition-colors duration-150 ${
+    isActive ? "bg-accent-soft font-bold text-accent-ink" : "text-ink hover:bg-surface"
   }`;
 
-function SidebarContent({ user, logout }) {
+// ปุ่มในแถบเมนูล่าง (มือถือ/แท็บเล็ต) ไอคอนอยู่บน คำอยู่ล่าง
+const tabClass = ({ isActive }) =>
+  `flex min-h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 text-sm transition-colors duration-150 ${
+    isActive ? "bg-accent-soft font-bold text-accent-ink" : "text-ink hover:bg-surface"
+  }`;
+
+// เมนูที่คนนี้มีสิทธิ์เห็น ช่างไม่เห็นเมนูสั่งซื้อกับรับของ
+const menuFor = (user) => MENU.filter((m) => !(m.staffOnly && user.role === "mechanic"));
+
+// showMenu=false ใช้ในเมนูเพิ่มเติมบนมือถือ เพราะเมนูหลักอยู่ที่แถบล่างแล้ว
+function SidebarContent({ user, logout, showMenu = true }) {
   return (
     <>
       <div className="flex items-center gap-2 px-3 py-3 text-lg font-semibold">
         <Wrench size={22} className="text-accent" />
         อู่ซ่อมรถ
       </div>
-      <div className="flex-1 space-y-4 overflow-y-auto">
-        {GROUPS.map((group) => (
-          <div key={group} className="space-y-1">
-            <div className="px-3 pb-1 text-xs text-muted">{group}</div>
-            {MENU.filter((m) => m.group === group && !(m.staffOnly && user.role === "mechanic")).map((m) => (
-              <NavLink key={m.to} to={m.to} className={linkClass}>
-                <m.icon />
-                <span>{m.label}</span>
-              </NavLink>
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="space-y-1 border-t border-line pt-2">
+      {showMenu && (
+        <div className="flex-1 space-y-1">
+          {menuFor(user).map((m) => (
+            <NavLink key={m.to} to={m.to} className={linkClass}>
+              <m.icon />
+              <span>{m.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+      <div className={`space-y-1 pt-2 ${showMenu ? "border-t border-line" : ""}`}>
         {user.role === "admin" && (
           <NavLink to="/settings" className={linkClass}>
             <Settings />
@@ -62,38 +68,57 @@ export default function AppLayout() {
   const { user, logout } = useAuth();
   const drawer = useRef(null);
   return (
-    <div className="min-h-dvh md:flex">
-      {/* จอใหญ่: แถบข้างอยู่กับที่ */}
+    <div className="min-h-dvh lg:flex">
+      {/* คอม: แถบข้างอยู่กับที่ */}
       <nav
         aria-label="เมนูหลัก"
-        className="sticky top-0 hidden h-dvh w-60 flex-none flex-col border-r border-line p-3 print:hidden md:flex"
+        className="sticky top-0 hidden h-dvh w-60 flex-none flex-col border-r border-line p-3 print:hidden lg:flex"
       >
         <SidebarContent user={user} logout={logout} />
       </nav>
 
-      {/* มือถือ: แถบบนกับเมนูเลื่อน ใช้ <dialog> เลยได้ปุ่ม Esc และพื้นหลังทึบมาเอง */}
-      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-white px-2 py-2 print:hidden md:hidden">
+      {/* มือถือ/แท็บเล็ต: ชื่อร้านด้านบน */}
+      <header className="sticky top-0 z-20 flex min-h-12 items-center gap-2 border-b border-line bg-white px-4 font-bold print:hidden lg:hidden">
+        <Wrench size={22} className="text-accent" />
+        อู่ซ่อมรถ
+      </header>
+
+      {/* มือถือ/แท็บเล็ต: แถบเมนูล่าง เห็นตลอด ไม่ต้องหาปุ่ม ☰ */}
+      <nav
+        aria-label="เมนูหลัก"
+        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] print:hidden lg:hidden"
+      >
+        {menuFor(user).map((m) => (
+          <NavLink key={m.to} to={m.to} className={tabClass}>
+            <m.icon size={22} />
+            {m.label}
+          </NavLink>
+        ))}
         <button
           type="button"
-          aria-label="เปิดเมนู"
-          onClick={() => drawer.current.showModal()}
-          className="grid size-11 cursor-pointer place-items-center rounded-lg text-muted hover:bg-surface hover:text-ink"
+          onClick={() => {
+            drawer.current.showModal();
+            drawer.current.focus();
+          }}
+          className={tabClass({ isActive: false })}
         >
-          <Menu />
+          <Menu size={22} />
+          เพิ่มเติม
         </button>
-        <span className="font-semibold">อู่ซ่อมรถ</span>
-      </header>
-      {/* คลิกที่ไหนก็ปิด ทั้งพื้นหลังและเมนูที่เพิ่งกด */}
+      </nav>
+      {/* เมนูเพิ่มเติม (ตั้งค่า ออกจากระบบ) คลิกที่ไหนก็ปิด ใช้ <dialog> เลยได้ปุ่ม Esc และพื้นหลังทึบมาเอง */}
       <dialog
         ref={drawer}
-        aria-label="เมนูหลัก"
+        tabIndex={-1}
+        aria-label="เมนูเพิ่มเติม"
         onClick={() => drawer.current.close()}
-        className="m-0 h-dvh max-h-none w-64 max-w-[80vw] flex-col bg-white p-3 backdrop:bg-black/40 open:flex md:hidden"
+        className="m-0 h-dvh max-h-none w-72 outline-none max-w-[85vw] flex-col bg-white p-3 backdrop:bg-black/40 open:flex lg:hidden"
       >
-        <SidebarContent user={user} logout={logout} />
+        <SidebarContent user={user} logout={logout} showMenu={false} />
       </dialog>
 
-      <main className="min-w-0 flex-1 p-4 md:p-6 print:p-0">
+      {/* เว้นที่ล่างให้แถบเมนู 3.5rem + ขอบจอ */}
+      <main className="min-w-0 flex-1 p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6 print:p-0">
         <Outlet />
       </main>
     </div>

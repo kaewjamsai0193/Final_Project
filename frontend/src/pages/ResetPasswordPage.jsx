@@ -50,7 +50,14 @@ export default function ResetPasswordPage() {
             {...register("password")}
           />
         ) : (
-          <Field label="อีเมล" type="email" autoComplete="email" autoCapitalize="none" required {...register("email")} />
+          <Field
+            label="อีเมล"
+            type="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            required
+            {...register("email")}
+          />
         )}
         {submit.error && (
           <p role="alert" className="field-error">

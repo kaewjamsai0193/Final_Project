@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Printer, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
 import { api, formatDate, formatMoney, formatQty } from "../../api";
 import { useAuth } from "../../auth";
 import DetailLayout from "../../components/DetailLayout";
+import { InfoList, ProductCell, Section, SimpleTable, StatGrid } from "../../components/DetailParts";
 import ReasonDialog from "../../components/ReasonDialog";
 import StatusBadge, { poStatus } from "../../components/StatusBadge";
 
@@ -20,23 +22,9 @@ export default function PurchaseOrderDetailPage() {
     return <DetailLayout back="/purchase-orders" backLabel="สั่งซื้อ" title={error?.message || "กำลังโหลด…"} />;
   }
 
-  const info = [
-    ["เบอร์โทร", po.supplier_phone],
-    ["ที่อยู่", po.supplier_address],
-    ["หมายเหตุ", po.note],
-    ["ผู้ออก", `${po.created_by_name} · ${formatDate(po.created_at)}`],
-    ["เหตุผลที่ปิด", po.close_reason],
-  ];
-  const menu = [];
-  if (isAdmin) {
-    menu.push({
-      label: "บันทึกรูปใบสั่งซื้อ",
-      onClick: () => window.open(`/print/po/${po.id}`, "_blank", "noreferrer"),
-    });
-  }
-  if (isAdmin && po.status === "open") {
-    menu.push({ label: "ปิดใบสั่งซื้อ", danger: true, onClick: () => setClosing(true) });
-  }
+  const pending = po.items.filter((it) => Number(it.qty_remaining) > 0);
+  // ของที่ยังค้างรับขึ้นก่อน ของที่รับครบแล้วไปอยู่ท้าย
+  const items = [...pending, ...po.items.filter((it) => Number(it.qty_remaining) <= 0)];
 
   return (
     <DetailLayout
@@ -45,75 +33,71 @@ export default function PurchaseOrderDetailPage() {
       title={po.display_number}
       subtitle={po.supplier_name}
       badge={<StatusBadge status={poStatus(po)} />}
-      menu={menu}
+      actions={
+        isAdmin && (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => window.open(`/print/po/${po.id}`, "_blank", "noreferrer")}
+            >
+              <Printer size={20} />
+              บันทึกรูปใบสั่งซื้อ
+            </button>
+            {po.status === "open" && (
+              <button type="button" className="btn btn-secondary text-danger" onClick={() => setClosing(true)}>
+                <XCircle size={20} />
+                ปิดใบสั่งซื้อ
+              </button>
+            )}
+          </>
+        )
+      }
     >
-      <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-        {info
-          .filter(([, value]) => value)
-          .map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-muted">{label}</dt>
-              <dd className="font-medium">{value}</dd>
-            </div>
-          ))}
-      </dl>
+      <StatGrid
+        stats={[
+          ["สั่งทั้งหมด", `${po.items.length} รายการ`],
+          ["ยังค้างรับ", `${pending.length} รายการ`, po.status === "open" && pending.length > 0],
+          ...(isAdmin ? [["ยอดรวม", formatMoney(po.estimated_total)]] : []),
+        ]}
+      />
 
-      <ul className="divide-y divide-line rounded-xl border border-line">
-        {po.items.map((it) => (
-          <PoItem key={it.product_id} item={it} showPrice={isAdmin} />
-        ))}
-      </ul>
-      {isAdmin && (
-        <dl className="space-y-1 px-1">
-          <div className="flex justify-between text-sm">
-            <dt>ยอดประมาณการ (ก่อน VAT)</dt>
-            <dd className="num">{formatMoney(po.estimated_total)}</dd>
-          </div>
-          <div className="flex justify-between text-sm">
-            <dt>VAT {Number(po.vat_rate)}%</dt>
-            <dd className="num">{formatMoney(po.estimated_vat)}</dd>
-          </div>
-          <div className="flex justify-between font-semibold">
-            <dt>รวม VAT</dt>
-            <dd className="num">{formatMoney(Number(po.estimated_total) + Number(po.estimated_vat))}</dd>
-          </div>
-        </dl>
-      )}
+      <Section title="รายการสินค้า" hint={pending.length > 0 ? "ของที่ยังค้างรับอยู่ด้านบน" : undefined}>
+        <SimpleTable
+          rows={items}
+          columns={[
+            {
+              label: "สินค้า",
+              render: (it) => (
+                <ProductCell
+                  name={it.product_name}
+                  code={it.product_code}
+                  note={isAdmin && it.unit_price != null && `ราคาประมาณ ${formatMoney(it.unit_price)}`}
+                />
+              ),
+            },
+            { label: "สั่ง", right: true, render: (it) => `${formatQty(it.qty)} ${it.unit}` },
+            { label: "รับแล้ว", right: true, render: (it) => formatQty(it.qty_received) },
+            { label: "ค้าง", right: true, render: (it) => <b>{formatQty(it.qty_remaining)}</b> },
+          ]}
+        />
+      </Section>
+
+      <Section title="ข้อมูลใบสั่งซื้อ">
+        <InfoList
+          rows={[
+            ["เบอร์โทรร้าน", po.supplier_phone],
+            ["ที่อยู่ร้าน", po.supplier_address],
+            ["หมายเหตุ", po.note],
+            ["ผู้ออก", po.created_by_name],
+            ["วันที่", formatDate(po.created_at)],
+            ["เหตุผลที่ปิด", po.close_reason],
+          ]}
+        />
+      </Section>
 
       {closing && <ClosePoDialog poId={po.id} onClose={() => setClosing(false)} />}
     </DetailLayout>
-  );
-}
-
-// หนึ่งรายการในใบสั่งซื้อ รับแล้ว ค้าง และแถบความคืบหน้า ราคาเห็นเฉพาะเจ้าของอู่
-function PoItem({ item, showPrice }) {
-  const percent = Math.min(100, (Number(item.qty_received) / Number(item.qty)) * 100);
-  return (
-    <li className="px-4 py-3">
-      <div className="flex justify-between gap-2">
-        <span className="font-semibold">{item.product_name}</span>
-        <span className="text-sm text-muted">{item.product_code}</span>
-      </div>
-      <div className="num mt-1 text-sm">
-        รับแล้ว {formatQty(item.qty_received)} / {formatQty(item.qty)} {item.unit} · ค้าง{" "}
-        <b>{formatQty(item.qty_remaining)}</b>
-      </div>
-      <div
-        role="progressbar"
-        aria-label={`รับแล้ว ${item.product_name}`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(percent)}
-        className="mt-2 h-1.5 overflow-hidden rounded-full bg-line"
-      >
-        <div className="h-full bg-accent" style={{ width: `${percent}%` }} />
-      </div>
-      {showPrice && item.unit_price != null && (
-        <div className="num mt-1 text-sm text-muted">
-          ราคาประมาณการ {formatMoney(item.unit_price)} · รวม {formatMoney(Number(item.qty) * Number(item.unit_price))}
-        </div>
-      )}
-    </li>
   );
 }
 

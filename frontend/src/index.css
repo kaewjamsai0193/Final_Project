@@ -1,11 +1,10 @@
 @import "tailwindcss";
 
-
 @theme {
   --font-sans: "IBM Plex Sans Thai", ui-sans-serif, system-ui, sans-serif;
   --color-ink: #111827;
-  --color-muted: #6b7280;
-  --color-line: #e5e7eb;
+  --color-muted: #374151;
+  --color-line: #d1d5db;
   --color-surface: #f9fafb;
   --color-accent: #2563eb;
   --color-accent-soft: #eff6ff;
@@ -32,6 +31,15 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-accent;
   }
+  /* ช่องตัวเลขไม่ต้องมีลูกศรขึ้นลง ดูรกและกดพลาดง่าย */
+  input[type="number"] {
+    appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
   .lucide {
     @apply shrink-0;
   }
@@ -47,13 +55,13 @@
 
 @layer components {
   .page-title {
-    @apply text-xl font-semibold lg:text-2xl;
+    @apply text-xl font-bold lg:text-2xl;
   }
   .card {
     @apply rounded-xl border border-line bg-white p-4;
   }
   .label {
-    @apply mb-1 block text-sm text-muted;
+    @apply mb-1 block font-medium text-ink;
   }
   .field-hint {
     @apply mt-1 block text-sm text-muted;
@@ -62,7 +70,7 @@
     @apply text-sm font-medium text-danger;
   }
   .input {
-    @apply min-h-11 w-full rounded-lg border border-line bg-white px-3 py-2 text-base transition-colors duration-150 focus:border-accent focus:ring-3 focus:ring-accent-soft focus:outline-none disabled:bg-surface disabled:text-muted;
+    @apply min-h-11 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-base transition-colors duration-150 focus:border-accent focus:ring-3 focus:ring-accent-soft focus:outline-none disabled:bg-surface disabled:text-muted;
   }
 
   .btn {
@@ -72,7 +80,7 @@
     @apply bg-accent text-white hover:bg-accent-ink;
   }
   .btn-secondary {
-    @apply border border-line bg-white text-ink hover:bg-surface;
+    @apply border border-gray-400 bg-white text-ink hover:bg-surface;
   }
   .btn-ghost {
     @apply text-ink hover:bg-surface;
@@ -99,7 +107,7 @@
     @apply flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line;
   }
   .tab {
-    @apply -mb-px inline-flex min-h-11 cursor-pointer items-center border-b-2 border-transparent px-3 text-sm font-medium whitespace-nowrap text-muted transition-colors duration-150 hover:text-ink aria-selected:border-accent aria-selected:text-ink aria-[current=page]:border-accent aria-[current=page]:text-ink;
+    @apply -mb-px inline-flex min-h-11 cursor-pointer items-center rounded-t-lg border-b-2 border-transparent px-3 font-medium whitespace-nowrap text-muted transition-colors duration-150 hover:bg-surface hover:text-ink aria-selected:border-accent aria-selected:bg-accent-soft aria-selected:font-bold aria-selected:text-accent-ink aria-[current=page]:border-accent aria-[current=page]:bg-accent-soft aria-[current=page]:font-bold aria-[current=page]:text-accent-ink;
   }
 
   .modal {
@@ -110,17 +118,17 @@
   }
 
   .table {
-    @apply w-full text-sm;
+    @apply w-full;
   }
   .table th {
-    @apply border-b border-line bg-surface px-3 py-2.5 text-left font-medium whitespace-nowrap text-muted;
+    @apply border-b border-line bg-surface px-3 py-2.5 text-left font-semibold whitespace-nowrap text-ink;
   }
   .table td {
     @apply border-b border-line px-3 py-3 align-middle;
   }
 
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap;
+    @apply inline-flex items-center rounded-full px-3 py-0.5 text-sm font-semibold whitespace-nowrap;
   }
   .badge-neutral {
     @apply bg-neutral-soft text-ink;
@@ -133,9 +141,6 @@
   }
   .badge-ok {
     @apply bg-ok-soft text-ok-ink;
-  }
-  .badge-danger {
-    @apply bg-danger-soft text-danger;
   }
 
   .num {

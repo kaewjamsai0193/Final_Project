@@ -1,6 +1,6 @@
 import hashlib
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import Depends, HTTPException
@@ -21,7 +21,7 @@ bearer = HTTPBearer(auto_error=False)
 
 def create_token(user_id: int) -> str:
     """สร้าง token ของผู้ใช้คนนี้ หมดอายุตามเวลาที่ตั้งใน .env"""
-    expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    expire = datetime.now(UTC) + timedelta(minutes=JWT_EXPIRE_MINUTES)
     return jwt.encode({"user_id": user_id, "exp": expire}, JWT_SECRET, algorithm="HS256")
 
 
@@ -35,7 +35,7 @@ def _password_fingerprint(user: User) -> str:
 
 def create_reset_token(user: User) -> str:
     """token ในลิงก์ตั้งรหัสใหม่ ใช้ได้ครั้งเดียวภายใน 30 นาที ใช้แทน token ล็อกอินไม่ได้ (ไม่มี user_id)"""
-    expire = datetime.now(timezone.utc) + timedelta(minutes=RESET_MINUTES)
+    expire = datetime.now(UTC) + timedelta(minutes=RESET_MINUTES)
     payload = {"reset": user.id, "pw": _password_fingerprint(user), "exp": expire}
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
@@ -75,6 +75,7 @@ def require_role(*roles):
         return user
 
     return dep
+
 
 admin = require_role("admin")
 staff = require_role("admin", "employee")

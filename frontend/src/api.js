@@ -6,7 +6,10 @@ export const setToken = (token) => localStorage.setItem("token", token);
 export const removeToken = () => localStorage.removeItem("token");
 
 // ช่องที่รับแค่อังกฤษ ตัวเลข สัญลักษณ์ (รหัสผ่าน รหัสสินค้า) ตรงกับ ASCII ฝั่ง backend เบราว์เซอร์ไม่ยอมให้กดบันทึกถ้าไม่ตรง
-export const ASCII_ONLY = { pattern: "[!-~]+", title: "ใช้ได้เฉพาะอังกฤษ ตัวเลข และสัญลักษณ์ ห้ามมีภาษาไทยหรือเว้นวรรค" };
+export const ASCII_ONLY = {
+  pattern: "[!-~]+",
+  title: "ใช้ได้เฉพาะอังกฤษ ตัวเลข และสัญลักษณ์ ห้ามมีภาษาไทยหรือเว้นวรรค",
+};
 
 // แปลงข้อผิดพลาดของช่องกรอกหนึ่งช่องจาก backend เป็นภาษาไทย
 function validationMessage({ type, ctx = {} }) {
@@ -64,9 +67,6 @@ export const plainNumber = (v) => (v === null || v === undefined || v === "" ? "
 // เงิน 2 ตำแหน่งมีจุลภาค เช่น 1,234.50
 export const formatMoney = (v) =>
   Number(v).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-// VAT ที่บวกบนยอดก่อน VAT ปัดเป็นสตางค์ ใช้โชว์ระหว่างกรอก ยอดจริง backend คิดเอง
-export const vatOf = (amount, rate) => Math.round(Number(amount) * Number(rate)) / 100;
 
 // จำนวนแบบไม่มีศูนย์ท้าย เช่น 1.5
 export const formatQty = (v) => Number(v).toLocaleString("th-TH", { maximumFractionDigits: 2 });

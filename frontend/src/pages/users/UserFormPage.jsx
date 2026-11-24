@@ -1,7 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useOutletContext, useParams } from "react-router-dom";
 import { api, ASCII_ONLY } from "../../api";
 import { ROLE_NAME, useAuth } from "../../auth";
 import Field from "../../components/Field";
@@ -9,16 +8,14 @@ import Modal from "../../components/Modal";
 
 const EMPTY = { username: "", full_name: "", email: "", role: "employee", password: "" };
 
-// ป๊อปอัพเพิ่มหรือแก้ผู้ใช้ มี id ใน URL คือแก้
-export default function UserFormPage() {
-  const { id } = useParams();
-  const { close } = useOutletContext();
-  const { data: users } = useQuery({ queryKey: ["users"] });
-  const current = id && users?.find((u) => String(u.id) === id);
-  if (id && !current) return <Modal title={users ? "ไม่พบผู้ใช้" : "กำลังโหลด…"} onClose={close} />;
+// ป๊อปอัพเพิ่มผู้ใช้ (id = "new") หรือแก้ผู้ใช้ (id = เลขผู้ใช้)
+export default function UserFormPage({ id, users, close }) {
+  const isNew = id === "new";
+  const current = !isNew && users?.find((u) => String(u.id) === id);
+  if (!isNew && !current) return <Modal title={users ? "ไม่พบผู้ใช้" : "กำลังโหลด…"} onClose={close} />;
   return (
     <UserForm
-      key={id ?? "new"}
+      key={id}
       initial={current ? { ...current, email: current.email ?? "", password: "" } : EMPTY}
       close={close}
     />

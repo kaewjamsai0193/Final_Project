@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from fastapi import HTTPException
@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from app.db import get_or_404, lock_shop
 from app.models import GoodsReceipt, PurchaseOrder, PurchaseOrderItem, Setting, StockMovement
 from app.money import format_qty, line_total, unit_cost, vat_of
-from app.stock.service import products_by_id, stock_in
+from app.stock.service import adj_first, products_by_id, stock_in
 
 
 def received_by_product(db, po_id) -> dict[int, Decimal]:
@@ -24,7 +24,7 @@ def received_by_product(db, po_id) -> dict[int, Decimal]:
 def _close(po, reason, user):
     """ปิดใบสั่งซื้อ จดเหตุผล คนปิด และเวลาไว้พร้อมกัน"""
     po.status, po.close_reason = "closed", reason
-    po.closed_by, po.closed_at = user.id, datetime.now(timezone.utc)
+    po.closed_by, po.closed_at = user.id, datetime.now(UTC)
 
 
 def create_po(db, data, user) -> PurchaseOrder:
@@ -156,6 +156,7 @@ def gr_view(gr) -> dict:
             "unit": m.product.unit,
             "qty": m.qty,
             "unit_cost": unit_cost(m.cost_total, m.qty),
+            "adj_first": adj_first(m),
             "cost_total": m.cost_total,
         }
         for m in gr.items

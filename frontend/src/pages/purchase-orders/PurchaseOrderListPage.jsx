@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { api, formatDate, formatMoney } from "../../api";
 import { useAuth } from "../../auth";
 import DataTable from "../../components/DataTable";
@@ -32,7 +31,7 @@ export default function PurchaseOrderListPage() {
   return (
     <ListLayout
       title="ใบสั่งซื้อ"
-      basePath="/purchase-orders"
+      error={error}
       action={isAdmin && { label: "สร้างใบสั่งซื้อ", to: "/purchase-orders/new" }}
       toolbar={
         <SearchBar
@@ -45,18 +44,9 @@ export default function PurchaseOrderListPage() {
         />
       }
     >
-      {error && (
-        <p role="alert" className="field-error">
-          {error.message}
-        </p>
-      )}
       <DataTable
         items={items}
-        actions={(po) => (
-          <Link to={`/purchase-orders/${po.id}`} className="btn btn-secondary">
-            ดู
-          </Link>
-        )}
+        to={(po) => `/purchase-orders/${po.id}`}
         empty="ไม่มีใบสั่งซื้อ"
         card={(po) => (
           <>

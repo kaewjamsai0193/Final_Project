@@ -24,7 +24,13 @@ def test_take_oldest_lot_first():
 def test_lot_cost_adds_up_exactly():
     odd = lot("3", "100")  # ชิ้นละ 33.333…
     costs = [cost(take_from_lots([odd], D("1"))) for _ in range(3)]
-    assert costs == [D("33.33"), D("33.34"), D("33.33")] and sum(costs) == 100
+    assert costs == [D("33.34"), D("33.33"), D("33.33")] and sum(costs) == 100  # เศษ +0.01 ไปชิ้นแรก
+
+
+def test_adjust_first_negative():
+    over = lot("3", "200")  # ชิ้นละ 66.67 รวม 200.01 เกินมา 0.01
+    costs = [cost(take_from_lots([over], D("1"))) for _ in range(3)]
+    assert costs == [D("66.66"), D("66.67"), D("66.67")] and sum(costs) == 200
 
 
 def test_vat_added_on_top():

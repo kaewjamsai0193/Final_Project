@@ -3,9 +3,10 @@ import { Minus, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
-import { api, docNo, formatDate, formatMoney, formatQty, vatOf } from "../../api";
+import { api, docNo, formatDate, formatMoney, formatQty } from "../../api";
 import { useAuth } from "../../auth";
 import DetailLayout from "../../components/DetailLayout";
+import { ProductCell, Section, SimpleTable, StatGrid, Tabs } from "../../components/DetailParts";
 import Field from "../../components/Field";
 import ProductFormDialog from "../../components/ProductFormDialog";
 import ReasonDialog from "../../components/ReasonDialog";
@@ -22,74 +23,59 @@ export default function ProductDetailPage() {
   const product = useQuery({ queryKey: ["products", id] });
   const moves = useQuery({ queryKey: ["products", id, "movements"] });
   const lots = useQuery({ queryKey: ["products", id, "lots"], enabled: isAdmin });
-  const { data: shop } = useQuery({ queryKey: ["settings"] });
   const [dialog, setDialog] = useState(null); // ป๊อปอัพที่เปิดอยู่ null, "edit", "opening" หรือ "waste"
   const closeDialog = () => setDialog(null);
 
   const p = product.data;
   if (!p) return <DetailLayout back="/stock" backLabel="สต็อก" title={product.error?.message || "กำลังโหลด…"} />;
 
+  const low = productStatus(p) === "low";
+  const movesTab = ["ประวัติเข้า-ออก", <MovesTable key="moves" moves={moves} />];
+  const lotsTab = ["ล็อตคงเหลือ", <LotsTable key="lots" lots={lots} />];
+
   return (
     <DetailLayout
       back="/stock"
       backLabel="สต็อก"
       title={p.name}
-      subtitle={p.code}
+      subtitle={`รหัส ${p.code}`}
       badge={<StatusBadge status={productStatus(p)} />}
-      action={
-        isAdmin && (
-          <button type="button" className="btn btn-secondary" onClick={() => setDialog("opening")}>
-            <Plus size={20} />
-            สต็อกตั้งต้น
-          </button>
-        )
-      }
-      footer={
+      actions={
         isStaff && (
-          <div className="flex gap-2">
+          <>
+            <button type="button" className="btn btn-primary" onClick={() => setDialog("edit")}>
+              <Pencil size={20} />
+              แก้ไขสินค้า
+            </button>
             <button
               type="button"
-              className="btn btn-secondary flex-1"
+              className="btn btn-secondary"
               disabled={Number(p.qty_on_hand) <= 0}
               onClick={() => setDialog("waste")}
             >
               <Minus size={20} />
-              ของเสีย/สูญหาย
+              แจ้งของเสีย/สูญหาย
             </button>
-            <button type="button" className="btn btn-primary flex-1" onClick={() => setDialog("edit")}>
-              <Pencil size={20} />
-              แก้สินค้า
-            </button>
-          </div>
+            {isAdmin && (
+              <button type="button" className="btn btn-secondary" onClick={() => setDialog("opening")}>
+                <Plus size={20} />
+                ลงสต็อกตั้งต้น
+              </button>
+            )}
+          </>
         )
       }
     >
-      <div>
-        <div className="text-sm text-muted">คงเหลือ</div>
-        <div className="num text-4xl font-bold">
-          {formatQty(p.qty_on_hand)} <span className="text-lg font-medium text-muted">{p.unit}</span>
-        </div>
-      </div>
-      <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-        <Fact label="ราคาขาย (ก่อน VAT)" value={formatMoney(p.sale_price)} />
-        {shop && (
-          <Fact
-            label={`รวม VAT ${Number(shop.vat_rate)}%`}
-            value={formatMoney(Number(p.sale_price) + vatOf(p.sale_price, shop.vat_rate))}
-          />
-        )}
-        <Fact label="ขั้นต่ำ" value={Number(p.min_stock) > 0 ? formatQty(p.min_stock) : "-"} />
-      </dl>
+      <StatGrid
+        stats={[
+          ["คงเหลือ", `${formatQty(p.qty_on_hand)} ${p.unit}`, low],
+          ["ราคาขาย", formatMoney(p.sale_price)],
+          ["จำนวนขั้นต่ำ", Number(p.min_stock) > 0 ? `${formatQty(p.min_stock)} ${p.unit}` : "-"],
+        ]}
+      />
 
-      {isAdmin && (
-        <>
-          <h2 className="font-semibold">ล็อตคงเหลือ (ตัดออกจากบนลงล่าง)</h2>
-          <LotList lots={lots} />
-        </>
-      )}
-
-      <h2 className="font-semibold">สมุดสต็อก</h2>
-      <MovementList moves={moves} />
+      {/* ล็อตเห็นเฉพาะเจ้าของอู่ */}
+      {isAdmin ? <Tabs tabs={[movesTab, lotsTab]} /> : <Section title="ประวัติเข้า-ออก">{movesTab[1]}</Section>}
 
       {dialog === "edit" && <ProductFormDialog initial={p} onClose={closeDialog} onSaved={closeDialog} />}
       {dialog === "opening" && <OpeningDialog productId={p.id} onClose={closeDialog} />}
@@ -98,76 +84,54 @@ export default function ProductDetailPage() {
   );
 }
 
-// กล่องข้อมูลสั้น หัวข้อกับค่า
-function Fact({ label, value }) {
+// ประวัติของเข้าออก ล่าสุดขึ้นก่อน ของออกเป็นตัวเลขสีแดง
+function MovesTable({ moves }) {
   return (
-    <div className="rounded-lg bg-surface p-2">
-      <dt className="text-muted">{label}</dt>
-      <dd className="num font-semibold">{value}</dd>
-    </div>
-  );
-}
-
-// ล็อตที่ยังมีของ เก่าสุดอยู่บน ของออกตัดจากล็อตบนสุดก่อน (FIFO) เห็นเฉพาะเจ้าของอู่
-function LotList({ lots }) {
-  return (
-    <ul className="divide-y divide-line rounded-xl border border-line">
-      {lots.error && (
-        <li role="alert" className="field-error p-4">
-          {lots.error.message}
-        </li>
-      )}
-      {lots.data?.length === 0 && <li className="p-4 text-muted">ไม่มีของในคลัง</li>}
-      {lots.data?.map((lot) => (
-        <li key={lot.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
-          <div className="min-w-0 text-sm">
-            <div className="font-semibold">
-              {lot.receipt_id ? docNo("LOT", lot.receipt_id) : MOVE_LABEL[lot.movement_type]}
-            </div>
-            <div className="text-muted">
-              {formatDate(lot.created_at)} · ทุน/หน่วย {formatMoney(Number(lot.cost_total) / Number(lot.qty))}
-            </div>
-          </div>
-          <span className="num font-bold">
-            {formatQty(lot.qty_left)} <span className="font-normal text-muted">/ {formatQty(lot.qty)}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// สมุดสต็อก รายการล่าสุดขึ้นก่อน ของออกเป็นตัวเลขสีแดง
-function MovementList({ moves }) {
-  return (
-    <ul className="divide-y divide-line rounded-xl border border-line">
-      {moves.error && (
-        <li role="alert" className="field-error p-4">
-          {moves.error.message}
-        </li>
-      )}
-      {moves.data?.length === 0 && <li className="p-4 text-muted">ยังไม่มีของเข้าออก</li>}
-      {moves.data?.map((m) => {
-        const qty = Number(m.qty);
-        return (
-          <li key={m.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
-            <div className="min-w-0 text-sm">
-              <div className="font-semibold">{MOVE_LABEL[m.movement_type]}</div>
-              <div className="text-muted">
-                {[formatDate(m.created_at), m.created_by_name, m.receipt_id && docNo("LOT", m.receipt_id)]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </div>
-              {m.reason && <div className="text-muted">{m.reason}</div>}
-            </div>
-            <span className={`num font-bold ${qty < 0 ? "text-danger" : ""}`}>
-              {qty > 0 ? "+" : ""}
+    <SimpleTable
+      rows={moves.data}
+      error={moves.error}
+      empty="ยังไม่มีของเข้าออก"
+      columns={[
+        { label: "วันที่", render: (m) => formatDate(m.created_at) },
+        {
+          label: "รายการ",
+          render: (m) => (
+            <ProductCell
+              name={MOVE_LABEL[m.movement_type]}
+              code={m.receipt_id && docNo("LOT", m.receipt_id)}
+              note={m.reason || m.created_by_name}
+            />
+          ),
+        },
+        {
+          label: "จำนวน",
+          right: true,
+          render: (m) => (
+            <span className={Number(m.qty) < 0 ? "font-bold text-danger" : "font-bold"}>
+              {Number(m.qty) > 0 ? "+" : ""}
               {formatQty(m.qty)}
             </span>
-          </li>
-        );
-      })}
-    </ul>
+          ),
+        },
+      ]}
+    />
+  );
+}
+
+// ล็อตที่ยังมีของ เก่าสุดอยู่บน ของออกตัดจากล็อตบนสุดก่อน (FIFO)
+function LotsTable({ lots }) {
+  return (
+    <SimpleTable
+      rows={lots.data}
+      error={lots.error}
+      empty="ไม่มีของในคลัง"
+      columns={[
+        { label: "ล็อต", render: (l) => (l.receipt_id ? docNo("LOT", l.receipt_id) : MOVE_LABEL[l.movement_type]) },
+        { label: "วันที่", render: (l) => formatDate(l.created_at) },
+        { label: "ทุน/หน่วย", right: true, render: (l) => formatMoney(l.unit_cost) },
+        { label: "เหลือ", right: true, render: (l) => `${formatQty(l.qty_left)} / ${formatQty(l.qty)}` },
+      ]}
+    />
   );
 }
 

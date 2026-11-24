@@ -1,58 +1,54 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { useNavigate, useOutletContext } from "react-router-dom";
-import { api, formatMoney, formatQty, plainNumber, vatOf } from "../../api";
-import Field from "../../components/Field";
-import Modal from "../../components/Modal";
+import { useNavigate } from "react-router-dom";
+import { api, formatDate, formatMoney, formatQty, plainNumber } from "../../api";
+import FormPage from "../../components/FormPage";
 
-// ฟอร์มรับของตามใบสั่งซื้อ เลือกใบแล้วของที่ยังค้างรับเติมให้เอง แก้จำนวนที่มาจริงกับกรอกยอดก่อน VAT
-// (ซื้อด่วนแบบไม่มีใบสั่งซื้อ ทำจากปุ่มในใบงาน เฟส 5)
+// หน้าบันทึกรับของ เลือกใบสั่งซื้อ ของที่ค้างรับเติมเป็นบรรทัดให้เอง (จำนวนเท่ายอดค้าง) กรอกแค่ยอดเงิน
 export default function GoodsReceiptFormPage() {
   const navigate = useNavigate();
-  const { close } = useOutletContext();
   const queryClient = useQueryClient();
-  const [poId, setPoId] = useState("");
+  const [poId, setPoId] = useState(null);
   const openPos = useQuery({
     queryKey: ["purchase-orders", { status: "open" }],
     queryFn: () => api("/purchase-orders?status=open"),
   });
-  const po = useQuery({ queryKey: ["purchase-orders", poId], enabled: !!poId });
-  const { data: shop } = useQuery({ queryKey: ["settings"] });
+  const po = openPos.data?.find((p) => p.id === poId);
 
   const { register, handleSubmit, control, watch } = useForm({ defaultValues: { items: [] } });
-  const { fields, remove, replace } = useFieldArray({ control, name: "items" });
+  const { fields, replace } = useFieldArray({ control, name: "items" });
   const items = watch("items");
 
-  // เลือกใบสั่งซื้อแล้ว เติมของที่ยังค้างรับให้ จำนวนตั้งเท่ายอดค้าง (ปกติของมาครบ กรอกแค่ยอดเงิน)
+  // เลือกใบแล้ว เติมของที่ยังค้างรับ จำนวนตั้งเท่ายอดค้าง (ปกติของมาครบ กรอกแค่ยอดเงิน)
   useEffect(() => {
-    if (!po.data) return;
     replace(
-      po.data.items
+      (po?.items ?? [])
         .filter((i) => Number(i.qty_remaining) > 0)
         .map((i) => ({
           product_id: i.product_id,
-          label: `${i.product_code} — ${i.product_name} (${i.unit})`,
+          name: i.product_name,
+          code: i.product_code,
+          unit: i.unit,
           remaining: i.qty_remaining,
           qty: plainNumber(i.qty_remaining),
           cost_total: "",
         })),
     );
-  }, [po.data, replace]);
+  }, [po, replace]);
 
   // ตัวเลขนี้แค่โชว์ระหว่างกรอก backend คิดใหม่เองตอนบันทึก
-  const unitCost = (it) => (Number(it.qty) > 0 ? Number(it.cost_total || 0) / Number(it.qty) : 0);
-  const subtotal = items.reduce((sum, it) => sum + Number(it.cost_total || 0), 0);
-  const vat = vatOf(subtotal, shop?.vat_rate ?? 0);
+  const total = items.reduce((sum, it) => sum + Number(it.cost_total || 0), 0);
 
   const save = useMutation({
     mutationFn: (form) =>
       api("/goods-receipts", {
         method: "POST",
         body: {
-          po_id: Number(poId),
-          items: form.items.map((it) => ({ product_id: it.product_id, qty: it.qty, cost_total: it.cost_total })),
+          po_id: poId,
+          items: form.items
+            .filter((it) => Number(it.qty) > 0) // ใส่ 0 = ไม่มา ไม่ต้องส่ง
+            .map((it) => ({ product_id: it.product_id, qty: it.qty, cost_total: it.cost_total || "0" })),
         },
       }),
     onSuccess: (gr) => {
@@ -65,97 +61,105 @@ export default function GoodsReceiptFormPage() {
   });
 
   return (
-    <Modal
+    <FormPage
+      back="/goods-receipts"
+      backLabel="รับของ"
       title="บันทึกรับของ"
-      onClose={close}
       onSubmit={handleSubmit((form) => save.mutate(form))}
-      footer={
+      error={save.error}
+      bar={
         <>
-          {save.error && (
-            <p role="alert" className="field-error mb-2">
-              {save.error.message}
-            </p>
-          )}
-          <div className="flex items-center gap-3">
-            <div className="mr-auto text-sm">
-              <div className="text-muted">ยอดจ่ายรวม VAT</div>
-              <div className="num text-lg font-bold">{formatMoney(subtotal + vat)}</div>
-              <div className="num text-xs text-muted">
-                ก่อน VAT {formatMoney(subtotal)} + VAT {formatMoney(vat)}
-              </div>
-            </div>
-            <button className="btn btn-primary" disabled={save.isPending || fields.length === 0}>
-              {save.isPending ? "กำลังบันทึก…" : "บันทึกรับของ"}
-            </button>
+          <div className="mr-auto">
+            <div className="text-sm text-muted">{fields.length} รายการ · ต้นทุนรวม</div>
+            <div className="num text-lg font-bold">{formatMoney(total)}</div>
           </div>
-          <p className="mt-1 text-xs text-muted">
-            บันทึกแล้วแก้ไม่ได้ รับเกินให้แจ้งของเสีย/สูญหาย รับขาดให้รับเพิ่มอีกใบ
-          </p>
+          <button className="btn btn-primary" disabled={save.isPending || fields.length === 0}>
+            {save.isPending ? "กำลังบันทึก…" : "บันทึกรับของ"}
+          </button>
         </>
       }
     >
-      <label className="block">
-        <span className="label">ใบสั่งซื้อที่เปิดอยู่</span>
-        <select className="input" required value={poId} onChange={(e) => setPoId(e.target.value)}>
-          <option value="">— เลือกใบสั่งซื้อ —</option>
-          {openPos.data?.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.display_number} — {p.supplier_name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="space-y-2">
+        <h2 className="font-semibold">1. เลือกใบสั่งซื้อที่ของมาส่ง</h2>
+        {openPos.error && <p className="field-error">{openPos.error.message}</p>}
+        {openPos.data?.length === 0 && <p className="text-muted">ไม่มีใบสั่งซื้อที่รอรับของ</p>}
+        <div role="radiogroup" aria-label="ใบสั่งซื้อ" className="grid gap-2 sm:grid-cols-2">
+          {openPos.data?.map((p) => {
+            const pending = p.items.filter((i) => Number(i.qty_remaining) > 0).length;
+            const selected = p.id === poId;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setPoId(p.id)}
+                className={`rounded-lg border-2 p-3 text-left ${
+                  selected ? "border-accent bg-accent-soft" : "border-line bg-white hover:bg-surface"
+                }`}
+              >
+                <div className="font-bold">
+                  {p.display_number} · {p.supplier_name}
+                </div>
+                <div className="text-sm text-muted">
+                  {formatDate(p.created_at)} · ค้างรับ {pending} รายการ
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      <section className="space-y-3">
-        <h3 className="font-semibold">รายการที่รับ</h3>
-        {!poId && <p className="text-muted">เลือกใบสั่งซื้อก่อน</p>}
-        {po.data && fields.length === 0 && <p className="text-muted">ใบสั่งซื้อนี้ไม่มียอดค้างรับ</p>}
-        {fields.map((field, i) => (
-          <div key={field.id} className="space-y-3 rounded-lg border border-line p-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-semibold">{field.label}</div>
-                <div className="text-sm text-muted">ค้างรับ {formatQty(field.remaining)}</div>
-              </div>
-              {fields.length > 1 && (
-                <button
-                  type="button"
-                  aria-label={`ลบรายการที่ ${i + 1}`}
-                  className="btn btn-ghost btn-icon text-muted hover:text-danger"
-                  onClick={() => remove(i)}
-                >
-                  <X size={18} />
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field
-                label="จำนวน"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0.01"
-                max={field.remaining}
-                required
-                {...register(`items.${i}.qty`)}
-              />
-              <Field
-                label="ยอดก่อน VAT (บาท)"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                required
-                {...register(`items.${i}.cost_total`)}
-              />
-            </div>
-            <div className="flex justify-between rounded-lg bg-surface px-3 py-2 text-sm">
-              <span className="text-muted">ต้นทุน/หน่วย (ก่อน VAT)</span>
-              <span className="num font-semibold">{formatMoney(unitCost(items[i]))}</span>
-            </div>
-          </div>
-        ))}
-      </section>
-    </Modal>
+      {po && (
+        <>
+          <h2 className="font-semibold">2. ใส่จำนวนที่มาจริง และยอดเงินตามบิล</h2>
+          <p className="text-sm text-muted">
+            จำนวนกรอกให้เท่ายอดค้างแล้ว มาไม่ครบแก้เป็นจำนวนที่มาจริง ไม่มาเลยใส่ 0 แล้วกรอกยอดเงิน (ก่อน VAT) ตามบิล
+          </p>
+          <ol className="card divide-y divide-line py-0">
+            {fields.map((field, i) => (
+              <li key={field.id} className="space-y-2 py-3">
+                <div>
+                  <div className="font-medium">
+                    {i + 1}. {field.name}
+                  </div>
+                  <div className="text-sm text-muted">
+                    {field.code} · ค้างรับ {formatQty(field.remaining)} {field.unit}
+                  </div>
+                </div>
+                <div className="grid grid-cols-[7rem_8rem] gap-3">
+                  <label>
+                    <span className="block text-sm text-muted">มาจริง ({field.unit})</span>
+                    <input
+                      className="input num text-right"
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      max={field.remaining}
+                      required
+                      {...register(`items.${i}.qty`)}
+                    />
+                  </label>
+                  <label>
+                    <span className="block text-sm text-muted">ยอดเงิน (บาท)</span>
+                    <input
+                      className="input num text-right"
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      min="0"
+                      required={Number(items[i]?.qty) > 0}
+                      {...register(`items.${i}.cost_total`)}
+                    />
+                  </label>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="text-sm text-muted">บันทึกแล้วแก้ไม่ได้ ของที่ยังไม่มารับเพิ่มได้อีกใบภายหลัง</p>
+        </>
+      )}
+    </FormPage>
   );
 }

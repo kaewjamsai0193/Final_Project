@@ -1,35 +1,30 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 import { useFieldArray, useForm } from "react-hook-form";
-import { useNavigate, useOutletContext } from "react-router-dom";
-import { api, formatMoney } from "../../api";
+import { useNavigate } from "react-router-dom";
+import { api, formatMoney, formatQty } from "../../api";
 import Field from "../../components/Field";
-import Modal from "../../components/Modal";
+import FormPage from "../../components/FormPage";
 import ProductSearch from "../../components/ProductSearch";
+import { productStatus } from "../../components/StatusBadge";
 
-const EMPTY_PO = {
-  supplier_name: "",
-  supplier_phone: "",
-  supplier_address: "",
-  note: "",
-  items: [],
-};
+const EMPTY_PO = { supplier_name: "", supplier_phone: "", supplier_address: "", note: "", items: [] };
 
-// ฟอร์มสร้างใบสั่งซื้อ (เจ้าของอู่) ข้อมูลร้านกับรายการสินค้า บันทึกแล้วไปหน้าใบใหม่
+// หน้าสร้างใบสั่งซื้อ (เจ้าของอู่) กรอกร้าน แล้วเพิ่มสินค้าเป็นบรรทัด ๆ
 export default function PurchaseOrderFormPage() {
-  const { close } = useOutletContext();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: products } = useQuery({ queryKey: ["products"] });
   const { register, handleSubmit, control, watch } = useForm({ defaultValues: EMPTY_PO });
-  const { fields, append, remove } = useFieldArray({ control, name: "items" }); // แต่ละแถวมี product, qty, unit_price
+  const { fields, append, remove } = useFieldArray({ control, name: "items" }); // แต่ละบรรทัดมี product, qty, unit_price
   const items = watch("items");
   // ตัวเลขนี้แค่โชว์ระหว่างกรอก backend คิดยอดจริงเองตอนบันทึก
-  const estimate = items.reduce((sum, it) => sum + Number(it.qty || 0) * Number(it.unit_price || 0), 0);
+  const total = items.reduce((sum, it) => sum + Number(it.qty || 0) * Number(it.unit_price || 0), 0);
 
-  // แตะสินค้าที่มีในรายการแล้ว ไม่เพิ่มซ้ำ
-  const addProduct = (p) => {
-    if (!items.some((it) => it.product.id === p.id)) append({ product: p, qty: "", unit_price: "" });
-  };
+  const picked = (p) => items.some((it) => it.product.id === p.id);
+  const add = (p) => picked(p) || append({ product: p, qty: "", unit_price: "" });
+  // ของที่ถึงจุดเตือนแต่ยังไม่อยู่ในใบ กดทีเดียวเพิ่มให้หมด
+  const lowStock = products?.filter((p) => productStatus(p) === "low" && !picked(p)) ?? [];
 
   const save = useMutation({
     mutationFn: ({ items, ...head }) =>
@@ -47,35 +42,28 @@ export default function PurchaseOrderFormPage() {
   });
 
   return (
-    <Modal
+    <FormPage
+      back="/purchase-orders"
+      backLabel="สั่งซื้อ"
       title="สร้างใบสั่งซื้อ"
-      onClose={close}
       onSubmit={handleSubmit((form) => save.mutate(form))}
-      footer={
+      error={save.error}
+      bar={
         <>
-          {save.error && (
-            <p role="alert" className="field-error mb-2">
-              {save.error.message}
-            </p>
-          )}
-          <div className="flex items-center gap-3">
-            <div className="mr-auto text-sm">
-              <div className="text-muted">ยอดประมาณการ (ก่อน VAT)</div>
-              <div className="num text-lg font-bold">{formatMoney(estimate)}</div>
-            </div>
-            <button className="btn btn-primary" disabled={save.isPending || fields.length === 0}>
-              {save.isPending ? "กำลังบันทึก…" : "บันทึกใบสั่งซื้อ"}
-            </button>
+          <div className="mr-auto">
+            <div className="text-sm text-muted">{fields.length} รายการ · ยอดรวม</div>
+            <div className="num text-lg font-bold">{formatMoney(total)}</div>
           </div>
+          <button className="btn btn-primary" disabled={save.isPending || fields.length === 0}>
+            {save.isPending ? "กำลังบันทึก…" : "บันทึกใบสั่งซื้อ"}
+          </button>
         </>
       }
     >
-      <Field label="ชื่อร้าน" required {...register("supplier_name")} />
-      <details className="rounded-lg border border-line px-3">
-        <summary className="flex min-h-11 cursor-pointer items-center font-medium">
-          ข้อมูลร้านเพิ่มเติม (ไม่บังคับ)
-        </summary>
-        <div className="space-y-3 pb-3">
+      <Field label="สั่งจากร้าน" required {...register("supplier_name")} />
+      <details>
+        <summary className="cursor-pointer text-accent-ink">+ เบอร์โทร ที่อยู่ หมายเหตุ (ไม่บังคับ)</summary>
+        <div className="mt-2 space-y-3">
           <Field
             label="เบอร์โทรร้าน"
             type="tel"
@@ -89,51 +77,70 @@ export default function PurchaseOrderFormPage() {
         </div>
       </details>
 
-      <section className="space-y-2">
-        <h3 className="font-semibold">รายการ</h3>
-        {fields.length > 0 && (
-          <ul className="divide-y divide-line rounded-lg border border-line">
-            {fields.map((field, i) => (
-              <li key={field.id} className="space-y-2 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 font-medium">
-                    {field.product.name} <span className="text-sm text-muted">{field.product.code}</span>
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={`ลบ ${field.product.name}`}
-                    className="btn btn-ghost btn-icon text-muted hover:text-danger"
-                    onClick={() => remove(i)}
-                  >
-                    <X size={18} />
-                  </button>
+      <ol className="card divide-y divide-line py-0">
+        {fields.length === 0 && <li className="py-4 text-muted">ยังไม่มีรายการ ค้นสินค้าด้านล่างเพื่อเพิ่ม</li>}
+        {fields.map((field, i) => (
+          <li key={field.id} className="space-y-2 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-medium">
+                  {i + 1}. {field.product.name}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field
-                    label={`จำนวน (${field.product.unit})`}
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0.01"
-                    required
-                    {...register(`items.${i}.qty`)}
-                  />
-                  <Field
-                    label="ราคา/หน่วย (ก่อน VAT)"
-                    hint="ไม่บังคับ"
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0"
-                    {...register(`items.${i}.unit_price`)}
-                  />
+                <div className="text-sm text-muted">
+                  {field.product.code} · เหลือ {formatQty(field.product.qty_on_hand)} {field.product.unit}
                 </div>
-              </li>
-            ))}
-          </ul>
+              </div>
+              <button
+                type="button"
+                className="text-sm whitespace-nowrap text-danger underline"
+                onClick={() => remove(i)}
+              >
+                ลบ
+              </button>
+            </div>
+            <div className="grid grid-cols-[7rem_8rem] gap-3">
+              <label>
+                <span className="block text-sm text-muted">จำนวน ({field.product.unit})</span>
+                <input
+                  className="input num text-right"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  {...register(`items.${i}.qty`)}
+                />
+              </label>
+              <label>
+                <span className="block text-sm text-muted">ราคา/หน่วย</span>
+                <input
+                  className="input num text-right"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0"
+                  {...register(`items.${i}.unit_price`)}
+                />
+              </label>
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div className="card space-y-2">
+        <div className="font-semibold">เพิ่มสินค้า</div>
+        <ProductSearch onPick={add} isPicked={picked} />
+        {lowStock.length > 0 && (
+          <button
+            type="button"
+            className="btn btn-secondary w-full text-warn-ink"
+            onClick={() => lowStock.forEach(add)}
+          >
+            <AlertTriangle size={20} />
+            เพิ่มของที่ถึงจุดเตือนทั้งหมด ({lowStock.length})
+          </button>
         )}
-        <ProductSearch onPick={addProduct} />
-      </section>
-    </Modal>
+      </div>
+    </FormPage>
   );
 }

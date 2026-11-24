@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 
@@ -24,7 +24,7 @@ def test_reset_token():
     assert reset_token_user(db, token) is user
     assert reset_token_user(db, create_token(user.id)) is None  # token ล็อกอินใช้รีเซ็ตไม่ได้
     assert reset_token_user(db, token + "x") is None  # ถูกแก้
-    expired = jwt.encode({"reset": 7, "pw": "x", "exp": datetime.now(timezone.utc) - timedelta(seconds=1)}, JWT_SECRET)
+    expired = jwt.encode({"reset": 7, "pw": "x", "exp": datetime.now(UTC) - timedelta(seconds=1)}, JWT_SECRET)
     assert reset_token_user(db, expired) is None
 
     user.is_active = False

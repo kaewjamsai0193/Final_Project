@@ -7,7 +7,6 @@ from app.models import User
 from app.users import service
 from app.users.schemas import UserCreate, UserOut, UserUpdate
 
-
 router = APIRouter(prefix="/api", tags=["users"])
 
 

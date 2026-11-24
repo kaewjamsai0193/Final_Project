@@ -9,7 +9,6 @@ from app.models import User
 from app.users.schemas import ForgotIn, LoginIn, LoginOut, ResetIn, UserOut
 from app.users.service import send_reset_email
 
-
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 

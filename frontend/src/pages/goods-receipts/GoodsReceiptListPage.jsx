@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { formatDate, formatMoney } from "../../api";
 import { useAuth } from "../../auth";
 import DataTable from "../../components/DataTable";
@@ -22,22 +21,13 @@ export default function GoodsReceiptListPage() {
   return (
     <ListLayout
       title="รับของ"
-      basePath="/goods-receipts"
+      error={error}
       action={{ label: "บันทึกรับของ", to: "/goods-receipts/new" }}
       toolbar={<SearchBar q={q} setQ={setQ} placeholder="ค้นเลขที่หรือร้าน" />}
     >
-      {error && (
-        <p role="alert" className="field-error">
-          {error.message}
-        </p>
-      )}
       <DataTable
         items={items}
-        actions={(gr) => (
-          <Link to={`/goods-receipts/${gr.id}`} className="btn btn-secondary">
-            ดู
-          </Link>
-        )}
+        to={(gr) => `/goods-receipts/${gr.id}`}
         empty="ยังไม่มีใบรับของ"
         card={(gr) => (
           <>

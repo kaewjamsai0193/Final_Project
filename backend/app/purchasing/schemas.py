@@ -79,6 +79,7 @@ class GRItemOut(BaseModel):
 
 class GRItemAdminOut(GRItemOut):
     unit_cost: Decimal
+    adj_first: Decimal
     cost_total: Decimal
 
 

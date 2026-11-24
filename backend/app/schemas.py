@@ -11,8 +11,10 @@ class In(BaseModel):
 class Out(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+
 class ReasonIn(In):
     reason: str = Field(min_length=1)
+
 
 def serialize_for_role(user, admin_schema, schema, obj):
     """เลือกแบบข้อมูลตามบทบาท เจ้าของอู่ได้แบบมีตัวเลขเงิน คนอื่นได้แบบไม่มี"""
